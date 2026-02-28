@@ -398,11 +398,10 @@
     // =========================
     const BRAND_URL = "https://pakistan-salary-tax-calculator-2026.daybook.com.pk";
 
-    // Put your PUBLIC logo URL here (PNG/JPG).
-    // Example options:
-    // - Upload logo file into this GitHub repo and use raw.githubusercontent URL
-    // - Host it on your domain and paste URL
-    const LOGO_URL = "https://raw.githubusercontent.com/belawallatif5501/pakistan-salary-tax-calculator-2026/refs/heads/main/assets/Logo.jpg"; // <-- paste logo URL here
+    // Use the RAW github link of your uploaded logo (JPG/PNG)
+    // Example:
+    // https://raw.githubusercontent.com/belawallatif5501/pakistan-salary-tax-calculator-2026/main/assets/Logo.jpg
+    const LOGO_URL = "https://raw.githubusercontent.com/belawallatif5501/pakistan-salary-tax-calculator-2026/main/assets/Logo.jpg";
 
     // -------------------------
     // State (for Copy/CSV/PDF)
@@ -415,7 +414,7 @@
       appliedSlab: null,
       slabMathPlain: "",
       surchargeApplied: false,
-      schedule: [] // [{label,fraction,income,tax,cumulative}]
+      schedule: []
     };
 
     // -------------------------
@@ -456,6 +455,15 @@
       return (Math.round(n)).toLocaleString("en-PK");
     }
 
+    // Make PDF-safe text (avoid × and long dashes that may render as garbage)
+    function safePdfText(s) {
+      return String(s || "")
+        .replace(/[×✕]/g, "x")
+        .replace(/[−–—]/g, "-")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
     // -------------------------
     // Salary slabs (TY 2026)
     // -------------------------
@@ -463,15 +471,15 @@
       { id: 1, label: "Up to 600,000",         lo: 0,        hi: 600000,   fixed: 0,      rate: 0.00, base: 0,
         formula: "0" },
       { id: 2, label: "600,001 – 1,200,000",   lo: 600000,   hi: 1200000,  fixed: 0,      rate: 0.01, base: 600000,
-        formula: "1% of (Income − 600,000)" },
+        formula: "1% of (Income - 600,000)" },
       { id: 3, label: "1,200,001 – 2,200,000", lo: 1200000,  hi: 2200000,  fixed: 6000,   rate: 0.11, base: 1200000,
-        formula: "6,000 + 11% of (Income − 1,200,000)" },
+        formula: "6,000 + 11% of (Income - 1,200,000)" },
       { id: 4, label: "2,200,001 – 3,200,000", lo: 2200000,  hi: 3200000,  fixed: 116000, rate: 0.23, base: 2200000,
-        formula: "116,000 + 23% of (Income − 2,200,000)" },
+        formula: "116,000 + 23% of (Income - 2,200,000)" },
       { id: 5, label: "3,200,001 – 4,100,000", lo: 3200000,  hi: 4100000,  fixed: 346000, rate: 0.30, base: 3200000,
-        formula: "346,000 + 30% of (Income − 3,200,000)" },
+        formula: "346,000 + 30% of (Income - 3,200,000)" },
       { id: 6, label: "Above 4,100,000",       lo: 4100000,  hi: Infinity, fixed: 616000, rate: 0.35, base: 4100000,
-        formula: "616,000 + 35% of (Income − 4,100,000)" },
+        formula: "616,000 + 35% of (Income - 4,100,000)" },
     ];
 
     function getAppliedSlab(income) {
@@ -647,29 +655,46 @@
       URL.revokeObjectURL(url);
     }
 
-    // Convert image URL -> DataURL so jsPDF can embed it
-    async function imageUrlToDataUrl(url){
+    // Load image URL -> dataUrl + natural dimensions
+    async function loadImageFromUrl(url) {
       const res = await fetch(url, { mode: "cors" });
       if (!res.ok) throw new Error("Logo fetch failed");
+
       const blob = await res.blob();
-      return await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(blob);
       });
+
+      const img = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = dataUrl;
+      });
+
+      return { dataUrl, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height };
     }
 
-    function addFooter(doc, pageWidth, pageHeight){
-      doc.setFont("helvetica","normal");
+    // Clickable footer link on every page (bottom-right)
+    function addFooter(doc) {
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      doc.setTextColor(120);
+      doc.setTextColor(0, 102, 204);
+
       const text = BRAND_URL;
       const textWidth = doc.getTextWidth(text);
       const x = pageWidth - 40 - textWidth;
       const y = pageHeight - 24;
-      doc.text(text, x, y);
-      doc.setTextColor(0);
+
+      doc.textWithLink(text, x, y, { url: text });
+
+      doc.setTextColor(0,0,0);
     }
 
     async function downloadPDF(){
@@ -685,30 +710,34 @@
       const margin = 40;
       let y = 52;
 
-      // ---- Header: Title (left) + Logo (top-right)
+      // Header title (left)
       doc.setFont("helvetica","bold");
       doc.setFontSize(14);
       doc.text("Pakistan Salary Tax Calculator (FY 2025–26 / TY 2026)", margin, y);
 
-      // Logo on top-right (if provided)
+      // Logo (top-right) — keep aspect ratio (no stretch)
       if (LOGO_URL && LOGO_URL.trim().length > 0) {
         try{
-          const dataUrl = await imageUrlToDataUrl(LOGO_URL.trim());
+          const { dataUrl, width, height } = await loadImageFromUrl(LOGO_URL.trim());
+          const maxW = 90;   // box width
+          const maxH = 28;   // box height
+          const scale = Math.min(maxW / width, maxH / height);
+          const w = Math.round(width * scale);
+          const h = Math.round(height * scale);
 
-          // Keep logo small and clean
-          const logoW = 80;
-          const logoH = 28;
-          const logoX = pageWidth - margin - logoW;
-          const logoY = 28;
+          const x = pageWidth - margin - w;
+          const yLogo = 26;
 
-          doc.addImage(dataUrl, "PNG", logoX, logoY, logoW, logoH);
-        }catch(e){
-          // If logo fails (CORS or bad URL), we silently skip.
+          const fmt = dataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+          doc.addImage(dataUrl, fmt, x, yLogo, w, h);
+        } catch(e){
+          // silently skip logo if something blocks it
         }
       }
 
       y += 18;
 
+      // subtitle
       doc.setFont("helvetica","normal");
       doc.setFontSize(10);
       doc.setTextColor(60,60,60);
@@ -721,6 +750,8 @@
       y += 12;
 
       doc.setFont("helvetica","normal");
+      doc.setFontSize(10);
+
       const summaryLines = [
         `Monthly Salary: PKR ${formatPKR(i.salary)}`,
         `Period: ${i.periodStart} to ${i.periodEnd}`,
@@ -732,6 +763,7 @@
       ];
 
       for (const line of summaryLines){
+        if (y > pageHeight - 70) { addFooter(doc); doc.addPage(); y = 52; }
         doc.text(line, margin, y);
         y += 14;
       }
@@ -742,9 +774,20 @@
       y += 12;
 
       doc.setFont("helvetica","normal");
-      const slabMathWrapped = doc.splitTextToSize(state.slabMathPlain || "-", 520);
-      doc.text(slabMathWrapped, margin, y);
-      y += (slabMathWrapped.length * 12) + 10;
+
+      // PDF-safe slab text + wrap + page-break protection
+      const slabText = safePdfText(state.slabMathPlain || "-");
+      const slabLines = doc.splitTextToSize(slabText, pageWidth - (margin * 2));
+      const slabHeight = slabLines.length * 12;
+
+      if (y + slabHeight > pageHeight - 70) {
+        addFooter(doc);
+        doc.addPage();
+        y = 52;
+      }
+
+      doc.text(slabLines, margin, y);
+      y += slabHeight + 10;
 
       doc.setFont("helvetica","bold");
       doc.text("Monthly Schedule (first 12 rows)", margin, y);
@@ -772,11 +815,11 @@
       y += 12;
 
       doc.setFont("helvetica","normal");
+
       const rows = state.schedule.slice(0, 12);
       for (const r of rows){
-        // new page handling
         if (y > pageHeight - 60) {
-          addFooter(doc, pageWidth, pageHeight);
+          addFooter(doc);
           doc.addPage();
           y = 52;
         }
@@ -789,7 +832,7 @@
       }
 
       // Footer on last page
-      addFooter(doc, pageWidth, pageHeight);
+      addFooter(doc);
 
       doc.save(`salary-tax-ty2026_${i.periodStart}_to_${i.periodEnd}.pdf`);
     }
@@ -825,20 +868,21 @@
       const totalTax = taxResult.tax;
       const appliedSlab = taxResult.slab;
 
-      // Slab math (plain + HTML)
+      // Slab math (plain + UI HTML)
       let slabMathPlain = "";
       let slabMathHTML = "";
 
       if (appliedSlab.id === 1) {
-        slabMathPlain = `No tax (≤ PKR 600,000).`;
+        slabMathPlain = `No tax (<= PKR 600,000).`;
         slabMathHTML = slabMathPlain;
       } else {
         const marginalBase = taxableIncome - appliedSlab.base;
         const marginalTax = marginalBase * appliedSlab.rate;
         const preSurcharge = appliedSlab.fixed + marginalTax;
 
+        // UI can keep symbols; PDF will sanitize later
         slabMathPlain =
-          `PKR ${formatPKR(appliedSlab.fixed)} + ${Math.round(appliedSlab.rate*100)}% × (PKR ${formatPKR(taxableIncome)} − PKR ${formatPKR(appliedSlab.base)}) = PKR ${formatPKR(preSurcharge)}` +
+          `PKR ${formatPKR(appliedSlab.fixed)} + ${Math.round(appliedSlab.rate*100)}% x (PKR ${formatPKR(taxableIncome)} - PKR ${formatPKR(appliedSlab.base)}) = PKR ${formatPKR(preSurcharge)}` +
           (taxResult.surchargeApplied ? `, then +9% surcharge` : ``);
 
         slabMathHTML =
@@ -909,7 +953,7 @@
       state.totalTax = totalTax;
       state.effectiveMonths = effectiveMonths;
       state.appliedSlab = appliedSlab;
-      state.slabMathPlain = slabMathPlain;
+      state.slabMathPlain = slabMathPlain; // PDF-safe base string
       state.surchargeApplied = taxResult.surchargeApplied;
       state.schedule = schedule;
 
@@ -937,7 +981,7 @@
       try{
         await downloadPDF();
       }catch(e){
-        alert("PDF failed to generate. If your logo URL blocks CORS, remove it or host it publicly.");
+        alert("PDF failed. If logo blocks loading, keep LOGO_URL as a GitHub RAW link.");
       }
     });
 
