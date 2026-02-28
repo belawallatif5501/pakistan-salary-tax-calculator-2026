@@ -6,37 +6,238 @@
   <title>Pakistan Salary Tax Calculator 2025–26</title>
   <style>
     body{font-family:Arial,system-ui,sans-serif;background:#f6f7fb;margin:0;padding:40px}
-    .card{max-width:720px;margin:auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+    .card{max-width:820px;margin:auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
     label{display:block;margin-top:14px;font-weight:600}
-    input,select,button{width:100%;padding:12px;margin-top:8px;border:1px solid #d9dbe3;border-radius:10px;font-size:14px}
+    input,button{width:100%;padding:12px;margin-top:8px;border:1px solid #d9dbe3;border-radius:10px;font-size:14px}
     button{background:#0a66c2;color:#fff;border:none;font-weight:700;cursor:pointer;margin-top:18px}
-    .note{font-size:12px;color:#555;margin-top:10px}
+    .note{font-size:12px;color:#555;margin-top:10px;line-height:1.4}
     .box{margin-top:16px;padding:14px;border-radius:10px;background:#f2f4f8}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .muted{color:#666;font-size:12px}
+    .kpi{font-size:16px;margin:6px 0}
+    .kpi strong{display:inline-block;min-width:220px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border-bottom:1px solid #e2e6ef;padding:10px;text-align:left;font-size:13px}
+    th{background:#ffffff;position:sticky;top:0}
+    .right{text-align:right}
+    .small{font-size:12px}
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>Pakistan Salary Tax Calculator (2025–26)</h2>
-    <div class="note">Next: we’ll add official slabs + partial-period (joining/leaving mid-month).</div>
+    <h2>Pakistan Salary Tax Calculator (FY 2025–26 / Tax Year 2026)</h2>
+    <div class="note">
+      Uses FBR salary slab rates (Section 149) and supports partial months (e.g., joining 15 Dec).
+      Enter salary as <b>monthly gross taxable salary</b> (simplified). Allowances/exemptions not handled yet.
+    </div>
 
-    <label>Monthly Salary (PKR)</label>
-    <input id="monthlySalary" type="number" placeholder="e.g., 250000" />
+    <div class="grid">
+      <div>
+        <label>Monthly Salary (PKR)</label>
+        <input id="monthlySalary" type="number" placeholder="e.g., 250000" />
+      </div>
+      <div>
+        <label>Tax Year Range (fixed)</label>
+        <input id="taxYearRange" type="text" value="01-Jul-2025 to 30-Jun-2026" disabled />
+      </div>
+    </div>
 
-    <label>Start Date (Joining)</label>
-    <input id="startDate" type="date" />
-
-    <label>End Date (Leaving) — optional</label>
-    <input id="endDate" type="date" />
+    <div class="grid">
+      <div>
+        <label>Start Date (Joining within tax year)</label>
+        <input id="startDate" type="date" />
+        <div class="muted">If blank, assumes 2025-07-01</div>
+      </div>
+      <div>
+        <label>End Date (Leaving within tax year) — optional</label>
+        <input id="endDate" type="date" />
+        <div class="muted">If blank, assumes 2026-06-30</div>
+      </div>
+    </div>
 
     <button id="calcBtn">Calculate</button>
 
-    <div class="box" id="output">Result will appear here.</div>
+    <div class="box" id="output">
+      Result will appear here.
+    </div>
+
+    <div class="box" id="monthBreakdown" style="display:none;">
+      <b>Month-wise period (for transparency)</b>
+      <div class="small muted">We calculate “effective months” using day-based fractions for partial months.</div>
+      <div id="breakdownTable"></div>
+    </div>
   </div>
 
   <script>
+    // =========================
+    // Helpers
+    // =========================
+    function parseDateOrNull(v) {
+      if (!v) return null;
+      const d = new Date(v + "T00:00:00");
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function clampDate(d, min, max) {
+      return new Date(Math.min(Math.max(d.getTime(), min.getTime()), max.getTime()));
+    }
+
+    function daysInMonth(year, monthIndex0) {
+      return new Date(year, monthIndex0 + 1, 0).getDate();
+    }
+
+    function formatPKR(n) {
+      return (Math.round(n)).toLocaleString("en-PK");
+    }
+
+    // =========================
+    // Salary tax slabs (FBR WHT Rate Card - Section 149 Salary, TY 2026)
+    // Source: FBR Withholding Income Tax Rate Card updated to 30-06-2025 (Finance Act 2025)
+    // =========================
+    function salaryTaxTY2026(taxableIncome) {
+      let tax = 0;
+
+      if (taxableIncome <= 600000) {
+        tax = 0;
+      } else if (taxableIncome <= 1200000) {
+        tax = (taxableIncome - 600000) * 0.01;
+      } else if (taxableIncome <= 2200000) {
+        tax = 6000 + (taxableIncome - 1200000) * 0.11;
+      } else if (taxableIncome <= 3200000) {
+        tax = 116000 + (taxableIncome - 2200000) * 0.23;
+      } else if (taxableIncome <= 4100000) {
+        tax = 346000 + (taxableIncome - 3200000) * 0.30;
+      } else {
+        tax = 616000 + (taxableIncome - 4100000) * 0.35;
+      }
+
+      // Surcharge @ 9% if taxable income exceeds 10,000,000 (per rate card note)
+      if (taxableIncome > 10000000) {
+        tax = tax + (tax * 0.09);
+      }
+
+      return tax;
+    }
+
+    // =========================
+    // Effective months calculation (day-based)
+    // =========================
+    function computeEffectiveMonths(startDate, endDate) {
+      const rows = [];
+
+      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const endMonthStart = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+      let total = 0;
+
+      while (cur.getTime() <= endMonthStart.getTime()) {
+        const y = cur.getFullYear();
+        const m = cur.getMonth();
+        const dim = daysInMonth(y, m);
+
+        const monthStart = new Date(y, m, 1);
+        const monthEnd = new Date(y, m, dim);
+
+        const activeStart = new Date(Math.max(monthStart.getTime(), startDate.getTime()));
+        const activeEnd = new Date(Math.min(monthEnd.getTime(), endDate.getTime()));
+
+        let fraction = 0;
+        if (activeStart.getTime() <= activeEnd.getTime()) {
+          // inclusive days
+          const daysWorked = Math.floor((activeEnd - activeStart) / (1000*60*60*24)) + 1;
+          fraction = daysWorked / dim;
+        }
+
+        total += fraction;
+
+        rows.push({
+          year: y,
+          month: m,
+          dim,
+          fraction
+        });
+
+        cur = new Date(y, m + 1, 1);
+      }
+
+      return { total, rows };
+    }
+
+    function monthName(m0) {
+      return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m0];
+    }
+
+    // =========================
+    // Main click
+    // =========================
     document.getElementById('calcBtn').addEventListener('click', () => {
-      document.getElementById('output').innerText =
-        'UI added ✅ Next step: tax slabs + partial-period calculation logic.';
+      const salary = Number(document.getElementById('monthlySalary').value);
+
+      if (!salary || salary <= 0) {
+        alert("Please enter a valid monthly salary.");
+        return;
+      }
+
+      // FY 2025-26: 01-Jul-2025 to 30-Jun-2026
+      const fyStart = new Date("2025-07-01T00:00:00");
+      const fyEnd   = new Date("2026-06-30T00:00:00");
+
+      const rawStart = parseDateOrNull(document.getElementById('startDate').value) || fyStart;
+      const rawEnd   = parseDateOrNull(document.getElementById('endDate').value) || fyEnd;
+
+      // Normalize ordering
+      const s0 = rawStart.getTime() <= rawEnd.getTime() ? rawStart : rawEnd;
+      const e0 = rawStart.getTime() <= rawEnd.getTime() ? rawEnd : rawStart;
+
+      // Clamp within FY
+      const start = clampDate(s0, fyStart, fyEnd);
+      const end = clampDate(e0, fyStart, fyEnd);
+
+      // Effective months using day fractions
+      const { total: effectiveMonths, rows } = computeEffectiveMonths(start, end);
+
+      const taxableIncome = salary * effectiveMonths;
+      const annualTax = salaryTaxTY2026(taxableIncome);
+
+      const avgMonthlyTax = effectiveMonths > 0 ? (annualTax / effectiveMonths) : 0;
+
+      // Output
+      document.getElementById('output').innerHTML = `
+        <div class="kpi"><strong>Period:</strong> ${start.toISOString().slice(0,10)} to ${end.toISOString().slice(0,10)}</div>
+        <div class="kpi"><strong>Effective Months:</strong> ${effectiveMonths.toFixed(4)}</div>
+        <div class="kpi"><strong>Taxable Income (approx):</strong> PKR ${formatPKR(taxableIncome)}</div>
+        <div class="kpi"><strong>Estimated Income Tax:</strong> PKR ${formatPKR(annualTax)}</div>
+        <div class="kpi"><strong>Avg Tax / Effective Month:</strong> PKR ${formatPKR(avgMonthlyTax)}</div>
+        <div class="note">
+          Notes: (1) This is a simplified estimator using FBR salary slabs (Section 149). (2) If income &gt; 10,000,000, surcharge is applied. (3) Allowances/exemptions, other incomes, and rebates are not included yet.
+        </div>
+      `;
+
+      // Breakdown table
+      const tableRows = rows.map(r => `
+        <tr>
+          <td>${monthName(r.month)}-${String(r.year).slice(-2)}</td>
+          <td class="right">${(r.fraction).toFixed(4)}</td>
+          <td class="right">PKR ${formatPKR(salary * r.fraction)}</td>
+        </tr>
+      `).join("");
+
+      document.getElementById('breakdownTable').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th class="right">Month Fraction</th>
+              <th class="right">Income for Month (approx)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      `;
+
+      document.getElementById('monthBreakdown').style.display = "block";
     });
   </script>
 </body>
