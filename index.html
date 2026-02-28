@@ -6,43 +6,38 @@
   <title>Pakistan Salary Tax Calculator 2025–26</title>
   <style>
     body{font-family:Arial,system-ui,sans-serif;background:#f6f7fb;margin:0;padding:40px}
-    .card{max-width:820px;margin:auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+    .card{max-width:980px;margin:auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
     label{display:block;margin-top:14px;font-weight:600}
-    input,button{width:100%;padding:12px;margin-top:8px;border:1px solid #d9dbe3;border-radius:10px;font-size:14px}
+    input,select,button{width:100%;padding:12px;margin-top:8px;border:1px solid #d9dbe3;border-radius:10px;font-size:14px}
     button{background:#0a66c2;color:#fff;border:none;font-weight:700;cursor:pointer;margin-top:18px}
-    .note{font-size:12px;color:#555;margin-top:10px;line-height:1.4}
+    .note{font-size:12px;color:#555;margin-top:10px;line-height:1.45}
     .box{margin-top:16px;padding:14px;border-radius:10px;background:#f2f4f8}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
     .muted{color:#666;font-size:12px}
     .kpi{font-size:16px;margin:6px 0}
-    .kpi strong{display:inline-block;min-width:240px}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
+    .kpi strong{display:inline-block;min-width:260px}
+    table{width:100%;border-collapse:collapse;margin-top:10px;background:#fff;border-radius:10px;overflow:hidden}
     th,td{border-bottom:1px solid #e2e6ef;padding:10px;text-align:left;font-size:13px}
-    th{background:#ffffff;position:sticky;top:0}
+    th{background:#f8f9fc}
     .right{text-align:right}
     .small{font-size:12px}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#e9eef9;font-size:12px;margin-left:8px}
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>Pakistan Salary Tax Calculator (FY 2025–26 / Tax Year 2026)</h2>
+    <h2>Pakistan Salary Tax Calculator <span class="pill">FY 2025–26 / TY 2026</span></h2>
     <div class="note">
-      Uses FBR salary slab rates (Section 149) and supports partial months (e.g., joining 15 Dec).
-      Enter salary as <b>monthly gross taxable salary</b> (simplified). Allowances/exemptions not handled yet.
+      Uses FBR salary slab rates (Section 149). Supports partial months (day-based fractions).<br/>
+      <b>Important:</b> This is a simplified estimator (no exemptions/allowances/rebates/other income).
     </div>
 
-    <div class="grid">
+    <div class="grid3">
       <div>
         <label>Monthly Salary (PKR)</label>
         <input id="monthlySalary" type="number" placeholder="e.g., 250000" />
       </div>
-      <div>
-        <label>Tax Year Range (fixed)</label>
-        <input id="taxYearRange" type="text" value="01-Jul-2025 to 30-Jun-2026" disabled />
-      </div>
-    </div>
-
-    <div class="grid">
       <div>
         <label>Start Date (Joining within tax year)</label>
         <input id="startDate" type="date" />
@@ -55,39 +50,48 @@
       </div>
     </div>
 
-    <button id="calcBtn">Calculate</button>
-
-    <div class="box" id="output">
-      Result will appear here.
+    <div class="grid">
+      <div>
+        <label>Tax Deduction Method</label>
+        <select id="method">
+          <option value="average">Method A: Average tax per effective month</option>
+          <option value="payroll">Method B: Payroll-style (spread over remaining months)</option>
+        </select>
+        <div class="muted">Payroll method distributes annual tax across remaining months in FY.</div>
+      </div>
+      <div>
+        <label>Tax Year Range (fixed)</label>
+        <input type="text" value="01-Jul-2025 to 30-Jun-2026" disabled />
+      </div>
     </div>
 
+    <button id="calcBtn">Calculate</button>
+
+    <div class="box" id="output">Result will appear here.</div>
+
     <div class="box" id="monthBreakdown" style="display:none;">
-      <b>Month-wise period (for transparency)</b>
-      <div class="small muted">We calculate “effective months” using day-based fractions for partial months.</div>
+      <b>Monthly Schedule</b>
+      <div class="small muted">Income uses day-based fraction. Tax depends on selected method.</div>
       <div id="breakdownTable"></div>
     </div>
   </div>
 
   <script>
-    // =========================
-    // Date utilities (SAFE for timezone)
-    // =========================
-
-    // Parse yyyy-mm-dd from <input type="date"> into a LOCAL date at 00:00
+    // -------------------------
+    // Date utilities (local-safe)
+    // -------------------------
     function parseLocalInputDate(value) {
       if (!value) return null;
       const parts = value.split("-");
       if (parts.length !== 3) return null;
       const y = Number(parts[0]);
-      const m = Number(parts[1]); // 1-12
+      const m = Number(parts[1]);
       const d = Number(parts[2]);
       if (!y || !m || !d) return null;
-      // LOCAL midnight (no UTC shifting)
       const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
       return isNaN(dt.getTime()) ? null : dt;
     }
 
-    // Format a local Date object as YYYY-MM-DD without UTC conversion
     function formatDateSafe(d) {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -103,17 +107,17 @@
       return new Date(year, monthIndex0 + 1, 0).getDate();
     }
 
-    function formatPKR(n) {
-      return (Math.round(n)).toLocaleString("en-PK");
-    }
-
     function monthName(m0) {
       return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m0];
     }
 
-    // =========================
+    function formatPKR(n) {
+      return (Math.round(n)).toLocaleString("en-PK");
+    }
+
+    // -------------------------
     // Salary tax slabs (TY 2026)
-    // =========================
+    // -------------------------
     function salaryTaxTY2026(taxableIncome) {
       let tax = 0;
 
@@ -139,12 +143,12 @@
       return tax;
     }
 
-    // =========================
-    // Effective months calculation (day-based)
-    // =========================
-    function computeEffectiveMonths(startDate, endDate) {
+    // -------------------------
+    // Effective months (day-based)
+    // Returns rows for each month in [start,end] and total fraction.
+    // -------------------------
+    function computeMonthlyFractions(startDate, endDate) {
       const rows = [];
-
       let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
       const endMonthStart = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
 
@@ -163,19 +167,13 @@
 
         let fraction = 0;
         if (activeStart.getTime() <= activeEnd.getTime()) {
-          // inclusive days
           const daysWorked = Math.floor((activeEnd - activeStart) / (1000*60*60*24)) + 1;
           fraction = daysWorked / dim;
         }
 
         total += fraction;
 
-        rows.push({
-          year: y,
-          month: m,
-          dim,
-          fraction
-        });
+        rows.push({ y, m, dim, fraction });
 
         cur = new Date(y, m + 1, 1);
       }
@@ -183,77 +181,126 @@
       return { total, rows };
     }
 
-    // =========================
-    // Main click
-    // =========================
-    document.getElementById('calcBtn').addEventListener('click', () => {
-      const salary = Number(document.getElementById('monthlySalary').value);
+    // Count "remaining months" in FY for payroll spreading:
+    // From the start month to FY end month inclusive (counts months, NOT fractions)
+    function countRemainingMonthsInFY(startDate, fyEnd) {
+      const startM = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const endM = new Date(fyEnd.getFullYear(), fyEnd.getMonth(), 1);
+      let count = 0;
+      let cur = new Date(startM);
+      while (cur.getTime() <= endM.getTime()) {
+        count++;
+        cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+      }
+      return count;
+    }
+
+    // -------------------------
+    // Main
+    // -------------------------
+    document.getElementById("calcBtn").addEventListener("click", () => {
+      const salary = Number(document.getElementById("monthlySalary").value);
+      const method = document.getElementById("method").value;
 
       if (!salary || salary <= 0) {
         alert("Please enter a valid monthly salary.");
         return;
       }
 
-      // FY 2025-26: 01-Jul-2025 to 30-Jun-2026
-      // IMPORTANT: Use LOCAL dates to avoid timezone shifts
-      const fyStart = new Date(2025, 6, 1);  // Jul = month 6 (0-based)
-      const fyEnd   = new Date(2026, 5, 30); // Jun = month 5 (0-based)
+      // FY 2025-26: 01-Jul-2025 to 30-Jun-2026 (LOCAL dates)
+      const fyStart = new Date(2025, 6, 1);
+      const fyEnd = new Date(2026, 5, 30);
 
-      const rawStart = parseLocalInputDate(document.getElementById('startDate').value) || fyStart;
-      const rawEnd   = parseLocalInputDate(document.getElementById('endDate').value) || fyEnd;
+      const rawStart = parseLocalInputDate(document.getElementById("startDate").value) || fyStart;
+      const rawEnd = parseLocalInputDate(document.getElementById("endDate").value) || fyEnd;
 
-      // Normalize ordering (if user accidentally swaps)
+      // Normalize ordering and clamp within FY
       const s0 = rawStart.getTime() <= rawEnd.getTime() ? rawStart : rawEnd;
       const e0 = rawStart.getTime() <= rawEnd.getTime() ? rawEnd : rawStart;
 
-      // Clamp within FY
       const start = clampDate(s0, fyStart, fyEnd);
       const end = clampDate(e0, fyStart, fyEnd);
 
-      // Effective months using day fractions
-      const { total: effectiveMonths, rows } = computeEffectiveMonths(start, end);
+      // Monthly fractions for income
+      const { total: effectiveMonths, rows } = computeMonthlyFractions(start, end);
 
       const taxableIncome = salary * effectiveMonths;
-      const annualTax = salaryTaxTY2026(taxableIncome);
-      const avgMonthlyTax = effectiveMonths > 0 ? (annualTax / effectiveMonths) : 0;
+      const totalTax = salaryTaxTY2026(taxableIncome);
 
-      // Output (SAFE date formatting)
-      document.getElementById('output').innerHTML = `
+      // Tax allocation
+      let denom = effectiveMonths; // default (average)
+      if (method === "payroll") {
+        // Spread over remaining months in FY from start month (not end date)
+        denom = countRemainingMonthsInFY(start, fyEnd);
+      }
+      const taxPerUnit = denom > 0 ? (totalTax / denom) : 0;
+
+      // Build schedule
+      let cumulativeTax = 0;
+      const schedule = rows.map((r, idx) => {
+        const income = salary * r.fraction;
+
+        // For average method: tax proportional to fraction (so partial month gets partial tax)
+        // For payroll method: tax per month (full month). For partial month, still deduct full month tax (common payroll behavior).
+        // We can later add a toggle to prorate payroll tax on partial months, but keep simple for now.
+        let taxThisMonth = 0;
+        if (method === "average") {
+          taxThisMonth = taxPerUnit * r.fraction;
+        } else {
+          taxThisMonth = taxPerUnit; // fixed per remaining month
+        }
+
+        cumulativeTax += taxThisMonth;
+
+        return {
+          label: `${monthName(r.m)}-${String(r.y).slice(-2)}`,
+          fraction: r.fraction,
+          income,
+          tax: taxThisMonth,
+          cumulative: cumulativeTax
+        };
+      });
+
+      const avgTaxPerEffectiveMonth = effectiveMonths > 0 ? (totalTax / effectiveMonths) : 0;
+
+      document.getElementById("output").innerHTML = `
         <div class="kpi"><strong>Period:</strong> ${formatDateSafe(start)} to ${formatDateSafe(end)}</div>
-        <div class="kpi"><strong>Effective Months:</strong> ${effectiveMonths.toFixed(4)}</div>
+        <div class="kpi"><strong>Effective Months (income basis):</strong> ${effectiveMonths.toFixed(4)}</div>
         <div class="kpi"><strong>Taxable Income (approx):</strong> PKR ${formatPKR(taxableIncome)}</div>
-        <div class="kpi"><strong>Estimated Income Tax:</strong> PKR ${formatPKR(annualTax)}</div>
-        <div class="kpi"><strong>Avg Tax / Effective Month:</strong> PKR ${formatPKR(avgMonthlyTax)}</div>
+        <div class="kpi"><strong>Estimated Total Tax:</strong> PKR ${formatPKR(totalTax)}</div>
+        <div class="kpi"><strong>Avg Tax / Effective Month:</strong> PKR ${formatPKR(avgTaxPerEffectiveMonth)}</div>
         <div class="note">
-          Notes: (1) This is a simplified estimator using FBR salary slabs (Section 149). (2) If income &gt; 10,000,000, surcharge is applied. (3) Allowances/exemptions, other incomes, and rebates are not included yet.
+          Method selected: <b>${method === "average" ? "Average (fraction-based)" : "Payroll-style (spread over remaining months)"}</b><br/>
+          Notes: simplified estimator; surcharge applies if income &gt; 10,000,000; exemptions/allowances/rebates not included.
         </div>
       `;
 
-      // Breakdown table
-      const tableRows = rows.map(r => `
+      const tableRows = schedule.map(s => `
         <tr>
-          <td>${monthName(r.month)}-${String(r.year).slice(-2)}</td>
-          <td class="right">${(r.fraction).toFixed(4)}</td>
-          <td class="right">PKR ${formatPKR(salary * r.fraction)}</td>
+          <td>${s.label}</td>
+          <td class="right">${s.fraction.toFixed(4)}</td>
+          <td class="right">PKR ${formatPKR(s.income)}</td>
+          <td class="right">PKR ${formatPKR(s.tax)}</td>
+          <td class="right">PKR ${formatPKR(s.cumulative)}</td>
         </tr>
       `).join("");
 
-      document.getElementById('breakdownTable').innerHTML = `
+      document.getElementById("breakdownTable").innerHTML = `
         <table>
           <thead>
             <tr>
               <th>Month</th>
-              <th class="right">Month Fraction</th>
-              <th class="right">Income for Month (approx)</th>
+              <th class="right">Income Fraction</th>
+              <th class="right">Income (approx)</th>
+              <th class="right">Tax Deducted</th>
+              <th class="right">Cumulative Tax</th>
             </tr>
           </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
+          <tbody>${tableRows}</tbody>
         </table>
       `;
 
-      document.getElementById('monthBreakdown').style.display = "block";
+      document.getElementById("monthBreakdown").style.display = "block";
     });
   </script>
 </body>
