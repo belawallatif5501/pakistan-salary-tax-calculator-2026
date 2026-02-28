@@ -15,7 +15,7 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .muted{color:#666;font-size:12px}
     .kpi{font-size:16px;margin:6px 0}
-    .kpi strong{display:inline-block;min-width:220px}
+    .kpi strong{display:inline-block;min-width:240px}
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{border-bottom:1px solid #e2e6ef;padding:10px;text-align:left;font-size:13px}
     th{background:#ffffff;position:sticky;top:0}
@@ -70,12 +70,29 @@
 
   <script>
     // =========================
-    // Helpers
+    // Date utilities (SAFE for timezone)
     // =========================
-    function parseDateOrNull(v) {
-      if (!v) return null;
-      const d = new Date(v + "T00:00:00");
-      return isNaN(d.getTime()) ? null : d;
+
+    // Parse yyyy-mm-dd from <input type="date"> into a LOCAL date at 00:00
+    function parseLocalInputDate(value) {
+      if (!value) return null;
+      const parts = value.split("-");
+      if (parts.length !== 3) return null;
+      const y = Number(parts[0]);
+      const m = Number(parts[1]); // 1-12
+      const d = Number(parts[2]);
+      if (!y || !m || !d) return null;
+      // LOCAL midnight (no UTC shifting)
+      const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    // Format a local Date object as YYYY-MM-DD without UTC conversion
+    function formatDateSafe(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
     }
 
     function clampDate(d, min, max) {
@@ -90,9 +107,12 @@
       return (Math.round(n)).toLocaleString("en-PK");
     }
 
+    function monthName(m0) {
+      return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m0];
+    }
+
     // =========================
-    // Salary tax slabs (FBR WHT Rate Card - Section 149 Salary, TY 2026)
-    // Source: FBR Withholding Income Tax Rate Card updated to 30-06-2025 (Finance Act 2025)
+    // Salary tax slabs (TY 2026)
     // =========================
     function salaryTaxTY2026(taxableIncome) {
       let tax = 0;
@@ -111,7 +131,7 @@
         tax = 616000 + (taxableIncome - 4100000) * 0.35;
       }
 
-      // Surcharge @ 9% if taxable income exceeds 10,000,000 (per rate card note)
+      // Surcharge @ 9% if taxable income exceeds 10,000,000
       if (taxableIncome > 10000000) {
         tax = tax + (tax * 0.09);
       }
@@ -163,10 +183,6 @@
       return { total, rows };
     }
 
-    function monthName(m0) {
-      return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m0];
-    }
-
     // =========================
     // Main click
     // =========================
@@ -179,13 +195,14 @@
       }
 
       // FY 2025-26: 01-Jul-2025 to 30-Jun-2026
-      const fyStart = new Date("2025-07-01T00:00:00");
-      const fyEnd   = new Date("2026-06-30T00:00:00");
+      // IMPORTANT: Use LOCAL dates to avoid timezone shifts
+      const fyStart = new Date(2025, 6, 1);  // Jul = month 6 (0-based)
+      const fyEnd   = new Date(2026, 5, 30); // Jun = month 5 (0-based)
 
-      const rawStart = parseDateOrNull(document.getElementById('startDate').value) || fyStart;
-      const rawEnd   = parseDateOrNull(document.getElementById('endDate').value) || fyEnd;
+      const rawStart = parseLocalInputDate(document.getElementById('startDate').value) || fyStart;
+      const rawEnd   = parseLocalInputDate(document.getElementById('endDate').value) || fyEnd;
 
-      // Normalize ordering
+      // Normalize ordering (if user accidentally swaps)
       const s0 = rawStart.getTime() <= rawEnd.getTime() ? rawStart : rawEnd;
       const e0 = rawStart.getTime() <= rawEnd.getTime() ? rawEnd : rawStart;
 
@@ -198,12 +215,11 @@
 
       const taxableIncome = salary * effectiveMonths;
       const annualTax = salaryTaxTY2026(taxableIncome);
-
       const avgMonthlyTax = effectiveMonths > 0 ? (annualTax / effectiveMonths) : 0;
 
-      // Output
+      // Output (SAFE date formatting)
       document.getElementById('output').innerHTML = `
-        <div class="kpi"><strong>Period:</strong> ${start.toISOString().slice(0,10)} to ${end.toISOString().slice(0,10)}</div>
+        <div class="kpi"><strong>Period:</strong> ${formatDateSafe(start)} to ${formatDateSafe(end)}</div>
         <div class="kpi"><strong>Effective Months:</strong> ${effectiveMonths.toFixed(4)}</div>
         <div class="kpi"><strong>Taxable Income (approx):</strong> PKR ${formatPKR(taxableIncome)}</div>
         <div class="kpi"><strong>Estimated Income Tax:</strong> PKR ${formatPKR(annualTax)}</div>
