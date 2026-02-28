@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Pakistan Salary Tax Calculator (FY 2025–26 / TY 2026)</title>
+
+  <!-- jsPDF for PDF download (client-side) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
   <style>
     :root{
       --bg:#f6f7fb;
@@ -60,21 +64,12 @@
     }
     .subnote b{color:var(--text)}
 
-    .grid{
-      display:grid;
-      gap:14px;
-    }
+    .grid{ display:grid; gap:14px; }
 
     /* Mobile: 1 col, Tablet: 2 col, Desktop: 3 col */
-    .grid.form{
-      grid-template-columns: 1fr;
-    }
-    @media(min-width:720px){
-      .grid.form{ grid-template-columns: 1fr 1fr; }
-    }
-    @media(min-width:980px){
-      .grid.form{ grid-template-columns: 1.1fr 1fr 1fr; }
-    }
+    .grid.form{ grid-template-columns: 1fr; }
+    @media(min-width:720px){ .grid.form{ grid-template-columns: 1fr 1fr; } }
+    @media(min-width:980px){ .grid.form{ grid-template-columns: 1.1fr 1fr 1fr; } }
 
     .card{
       background:var(--card);
@@ -100,7 +95,7 @@
     }
     .hint{font-size:12px;color:var(--muted);margin-top:6px}
 
-    input, select{
+    input{
       width:100%;
       padding:12px 12px;
       border-radius:12px;
@@ -109,33 +104,40 @@
       font-size:14px;
       outline:none;
     }
-    input:focus, select:focus{
+    input:focus{
       border-color:#93c5fd;
       box-shadow:0 0 0 4px rgba(59,130,246,0.12);
     }
 
     .actions{
       display:flex;
-      gap:12px;
+      gap:10px;
       align-items:center;
       flex-wrap:wrap;
       margin-top:12px;
     }
     .btn{
-      width:100%;
       border:none;
       border-radius:12px;
       padding:12px 14px;
       font-weight:800;
       font-size:14px;
       cursor:pointer;
-      background:var(--blue);
-      color:#fff;
       transition:0.15s ease;
+      width:100%;
     }
-    .btn:hover{ background:var(--blue2); }
+    .btn.primary{ background:var(--blue); color:#fff; }
+    .btn.primary:hover{ background:var(--blue2); }
+    .btn.secondary{
+      background:#ffffff;
+      color:#0b1220;
+      border:1px solid var(--border);
+    }
+    .btn.secondary:hover{ background:#f8fafc; }
+
     @media(min-width:720px){
-      .btn{ width:auto; min-width:220px; }
+      .btn{ width:auto; }
+      .btn.primary{ min-width:220px; }
     }
 
     .kpis{
@@ -203,15 +205,11 @@
       background:#f8fafc;
       font-size:12px;
       color:#0b1220;
-      letter-spacing:0.02em;
-      text-transform: none;
       position:sticky;
       top:0;
       z-index:1;
     }
-    .trApplied{
-      background:#eef2ff;
-    }
+    .trApplied{ background:#eef2ff; }
     .rightAlign{ text-align:right; }
 
     .footerNote{
@@ -229,8 +227,26 @@
     @media(min-width:980px){
       .twoCol{ grid-template-columns: 1fr 1fr; }
     }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:#0b1220;
+      color:#fff;
+      padding:10px 14px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .2s ease;
+    }
+    .toast.show{ opacity:1; }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header">
@@ -264,34 +280,17 @@
             <input id="endDate" type="date" />
             <div class="hint">If blank, assumes 2026-06-30</div>
           </div>
-
-          <div class="field">
-            <label>Tax Deduction Method</label>
-            <select id="method">
-              <option value="average">Method A: Average tax per effective month (fraction-based)</option>
-              <option value="payroll">Method B: Payroll-style (spread across remaining months in FY)</option>
-            </select>
-            <div class="hint">Payroll method spreads total tax across remaining FY months.</div>
-          </div>
-
-          <div class="field">
-            <label>Tax Year Range (fixed)</label>
-            <input type="text" value="01-Jul-2025 to 30-Jun-2026" disabled />
-            <div class="hint">Fixed for this calculator version.</div>
-          </div>
-
-          <div class="field">
-            <label>Prorate payroll tax in partial month</label>
-            <select id="payrollProrate">
-              <option value="no">No (deduct full month tax in partial month)</option>
-              <option value="yes">Yes (deduct tax proportional to month fraction)</option>
-            </select>
-            <div class="hint">Different companies handle partial month differently.</div>
-          </div>
         </div>
 
         <div class="actions">
-          <button class="btn" id="calcBtn">Calculate</button>
+          <button class="btn primary" id="calcBtn">Calculate</button>
+          <button class="btn secondary" id="copyBtn" disabled>Copy</button>
+          <button class="btn secondary" id="csvBtn" disabled>Download CSV</button>
+          <button class="btn secondary" id="pdfBtn" disabled>Download PDF</button>
+        </div>
+
+        <div class="hint" style="margin-top:10px;">
+          Allocation method: <b>Option A (tax per effective month × month fraction)</b> — purely tax perspective.
         </div>
       </div>
     </div>
@@ -323,10 +322,6 @@
               <div class="right" id="rEffMonths">—</div>
             </div>
             <div class="row">
-              <div class="left">Method</div>
-              <div class="right" id="rMethod">—</div>
-            </div>
-            <div class="row">
               <div class="left">Applied Slab</div>
               <div class="right" id="rSlab">—</div>
             </div>
@@ -345,7 +340,7 @@
       <div class="card">
         <div class="inner">
           <h3>Salary Slabs Used (TY 2026)</h3>
-          <div class="tableWrap" id="slabTableWrap">
+          <div class="tableWrap">
             <table id="slabTable">
               <thead>
                 <tr>
@@ -370,7 +365,7 @@
       <div class="inner">
         <h3>Monthly Schedule</h3>
         <div class="footerNote" style="margin-top:-4px;">
-          Income uses day-based fractions. Tax depends on selected method. Table scrolls on mobile.
+          Income uses day-based fractions. Tax is allocated using Option A (fraction-based).
         </div>
         <div class="tableWrap" style="margin-top:10px;">
           <table>
@@ -379,7 +374,7 @@
                 <th>Month</th>
                 <th class="rightAlign">Income Fraction</th>
                 <th class="rightAlign">Income (approx)</th>
-                <th class="rightAlign">Tax Deducted</th>
+                <th class="rightAlign">Tax Allocated</th>
                 <th class="rightAlign">Cumulative Tax</th>
               </tr>
             </thead>
@@ -389,14 +384,29 @@
           </table>
         </div>
         <div class="footerNote">
-          Payroll method: spreads total tax over remaining FY months from your start month (to June).
+          This allocation is for transparency; actual payroll withholding can vary by employer policy.
         </div>
       </div>
     </div>
-
   </div>
 
+  <div class="toast" id="toast">Copied</div>
+
   <script>
+    // -------------------------
+    // State (for Copy/CSV/PDF)
+    // -------------------------
+    const state = {
+      inputs: null,
+      taxableIncome: 0,
+      totalTax: 0,
+      effectiveMonths: 0,
+      appliedSlab: null,
+      slabMathPlain: "",
+      surchargeApplied: false,
+      schedule: [] // [{label,fraction,income,tax,cumulative}]
+    };
+
     // -------------------------
     // Date utilities (local-safe)
     // -------------------------
@@ -436,9 +446,8 @@
     }
 
     // -------------------------
-    // Salary slabs (TY 2026) — for display + applied slab identification
+    // Salary slabs (TY 2026)
     // -------------------------
-    // Each slab: lowerExclusive, upperInclusive, fixedTax, rate, baseForRate
     const SLABS_TY2026 = [
       { id: 1, label: "Up to 600,000",         lo: 0,        hi: 600000,   fixed: 0,      rate: 0.00, base: 0,
         formula: "0" },
@@ -455,11 +464,10 @@
     ];
 
     function getAppliedSlab(income) {
-      // income is taxable annual
+      if (income <= 600000) return SLABS_TY2026[0];
       for (const s of SLABS_TY2026) {
         if (income > s.lo && income <= s.hi) return s;
         if (s.hi === Infinity && income > s.lo) return s;
-        if (income <= 600000) return SLABS_TY2026[0];
       }
       return SLABS_TY2026[0];
     }
@@ -471,10 +479,10 @@
       if (slab.id === 1) tax = 0;
       else tax = slab.fixed + (income - slab.base) * slab.rate;
 
-      // Surcharge @ 9% if income exceeds 10,000,000
-      if (income > 10000000) tax = tax + (tax * 0.09);
+      const surchargeApplied = income > 10000000;
+      if (surchargeApplied) tax = tax + (tax * 0.09);
 
-      return { tax, slab, surchargeApplied: income > 10000000 };
+      return { tax, slab, surchargeApplied };
     }
 
     // -------------------------
@@ -513,18 +521,11 @@
       return { total, rows };
     }
 
-    // Count remaining months in FY from the start month to FY end inclusive
-    function countRemainingMonthsInFY(startDate, fyEnd) {
-      const startM = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-      const endM = new Date(fyEnd.getFullYear(), fyEnd.getMonth(), 1);
-      let count = 0;
-      let cur = new Date(startM);
-      while (cur.getTime() <= endM.getTime()) {
-        count++;
-        cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
-      }
-      return count;
-    }
+    // -------------------------
+    // UI helpers
+    // -------------------------
+    function setText(id, text){ document.getElementById(id).textContent = text; }
+    function setHTML(id, html){ document.getElementById(id).innerHTML = html; }
 
     function renderSlabTable(appliedSlabId) {
       const tbody = document.getElementById("slabTbody");
@@ -548,17 +549,191 @@
       }
     }
 
-    function setText(id, text){ document.getElementById(id).textContent = text; }
-    function setHTML(id, html){ document.getElementById(id).innerHTML = html; }
+    function showToast(msg){
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(()=>t.classList.remove("show"), 1200);
+    }
+
+    function enableExports(enabled){
+      document.getElementById("copyBtn").disabled = !enabled;
+      document.getElementById("csvBtn").disabled = !enabled;
+      document.getElementById("pdfBtn").disabled = !enabled;
+    }
 
     // -------------------------
-    // Main
+    // Copy / CSV / PDF builders
+    // -------------------------
+    function buildSummaryText(){
+      const i = state.inputs;
+      const slab = state.appliedSlab;
+
+      const lines = [];
+      lines.push("Pakistan Salary Tax Calculator (FY 2025–26 / TY 2026)");
+      lines.push(`Monthly Salary: PKR ${formatPKR(i.salary)}`);
+      lines.push(`Period: ${i.periodStart} to ${i.periodEnd}`);
+      lines.push(`Effective Months: ${state.effectiveMonths.toFixed(4)}`);
+      lines.push(`Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`);
+      lines.push(`Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`);
+      lines.push(`Applied Slab: ${slab ? slab.label : "-"}`);
+      lines.push(`Slab Calculation: ${state.slabMathPlain}`);
+      lines.push(`Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`);
+      lines.push("");
+      lines.push("Monthly Schedule (Month | Fraction | Income | Tax Allocated | Cumulative)");
+      for (const r of state.schedule){
+        lines.push(`${r.label} | ${r.fraction.toFixed(4)} | ${formatPKR(r.income)} | ${formatPKR(r.tax)} | ${formatPKR(r.cumulative)}`);
+      }
+      return lines.join("\n");
+    }
+
+    function downloadCSV(){
+      const i = state.inputs;
+      const slab = state.appliedSlab;
+
+      const headerRows = [
+        ["Report","Pakistan Salary Tax Calculator (FY 2025–26 / TY 2026)"],
+        ["Monthly Salary (PKR)", i.salary],
+        ["Period Start", i.periodStart],
+        ["Period End", i.periodEnd],
+        ["Effective Months", state.effectiveMonths.toFixed(6)],
+        ["Taxable Income (approx)", Math.round(state.taxableIncome)],
+        ["Estimated Total Tax", Math.round(state.totalTax)],
+        ["Applied Slab", slab ? slab.label : ""],
+        ["Slab Calculation", state.slabMathPlain],
+        ["Surcharge Applied", state.surchargeApplied ? "Yes (9%)" : "No"],
+        [],
+        ["Month","Income Fraction","Income (approx)","Tax Allocated","Cumulative Tax"]
+      ];
+
+      const scheduleRows = state.schedule.map(r => ([
+        r.label,
+        r.fraction.toFixed(6),
+        Math.round(r.income),
+        Math.round(r.tax),
+        Math.round(r.cumulative)
+      ]));
+
+      const all = headerRows.concat(scheduleRows);
+
+      const csv = all.map(row => row.map(cell => {
+        const s = (cell ?? "").toString();
+        const escaped = s.replace(/"/g,'""');
+        return `"${escaped}"`;
+      }).join(",")).join("\n");
+
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `salary-tax-ty2026_${i.periodStart}_to_${i.periodEnd}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadPDF(){
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit:"pt", format:"a4" });
+
+      const i = state.inputs;
+      const slab = state.appliedSlab;
+
+      const margin = 40;
+      let y = 52;
+
+      const title = "Pakistan Salary Tax Calculator (FY 2025–26 / TY 2026)";
+      doc.setFont("helvetica","bold");
+      doc.setFontSize(14);
+      doc.text(title, margin, y);
+      y += 18;
+
+      doc.setFont("helvetica","normal");
+      doc.setFontSize(10);
+      doc.setTextColor(60,60,60);
+      doc.text("Simplified estimator (no exemptions/allowances/rebates/other income).", margin, y);
+      y += 18;
+
+      doc.setTextColor(0,0,0);
+      doc.setFont("helvetica","bold");
+      doc.text("Summary", margin, y);
+      y += 12;
+
+      doc.setFont("helvetica","normal");
+      const summaryLines = [
+        `Monthly Salary: PKR ${formatPKR(i.salary)}`,
+        `Period: ${i.periodStart} to ${i.periodEnd}`,
+        `Effective Months: ${state.effectiveMonths.toFixed(4)}`,
+        `Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`,
+        `Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`,
+        `Applied Slab: ${slab ? slab.label : "-"}`,
+        `Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`,
+      ];
+
+      for (const line of summaryLines){
+        doc.text(line, margin, y);
+        y += 14;
+      }
+
+      y += 6;
+      doc.setFont("helvetica","bold");
+      doc.text("Slab Calculation", margin, y);
+      y += 12;
+
+      doc.setFont("helvetica","normal");
+      const slabMathWrapped = doc.splitTextToSize(state.slabMathPlain || "-", 520);
+      doc.text(slabMathWrapped, margin, y);
+      y += (slabMathWrapped.length * 12) + 10;
+
+      doc.setFont("helvetica","bold");
+      doc.text("Monthly Schedule (first 12 rows)", margin, y);
+      y += 12;
+
+      doc.setFont("helvetica","normal");
+      doc.setTextColor(60,60,60);
+      doc.text("Full schedule is available in CSV download.", margin, y);
+      y += 14;
+      doc.setTextColor(0,0,0);
+
+      // Simple table header
+      const col = [margin, margin+120, margin+220, margin+340, margin+460];
+      doc.setFont("helvetica","bold");
+      doc.text("Month", col[0], y);
+      doc.text("Fraction", col[1], y);
+      doc.text("Income", col[2], y);
+      doc.text("Tax", col[3], y);
+      doc.text("Cum Tax", col[4], y);
+      y += 10;
+
+      doc.setLineWidth(0.6);
+      doc.setDrawColor(220);
+      doc.line(margin, y, 555, y);
+      y += 12;
+
+      doc.setFont("helvetica","normal");
+      const rows = state.schedule.slice(0, 12);
+      for (const r of rows){
+        if (y > 770) {
+          doc.addPage();
+          y = 52;
+        }
+        doc.text(r.label, col[0], y);
+        doc.text(r.fraction.toFixed(4), col[1], y);
+        doc.text(formatPKR(r.income), col[2], y);
+        doc.text(formatPKR(r.tax), col[3], y);
+        doc.text(formatPKR(r.cumulative), col[4], y);
+        y += 14;
+      }
+
+      doc.save(`salary-tax-ty2026_${i.periodStart}_to_${i.periodEnd}.pdf`);
+    }
+
+    // -------------------------
+    // Main calculate (Option A only)
     // -------------------------
     document.getElementById("calcBtn").addEventListener("click", () => {
       const salary = Number(document.getElementById("monthlySalary").value);
-      const method = document.getElementById("method").value;
-      const payrollProrate = document.getElementById("payrollProrate").value === "yes";
-
       if (!salary || salary <= 0) {
         alert("Please enter a valid monthly salary.");
         return;
@@ -585,40 +760,34 @@
       const totalTax = taxResult.tax;
       const appliedSlab = taxResult.slab;
 
-      // Slab math display
-      let slabMath = "";
+      // Slab math (plain + HTML)
+      let slabMathPlain = "";
+      let slabMathHTML = "";
+
       if (appliedSlab.id === 1) {
-        slabMath = `No tax (≤ PKR 600,000).`;
+        slabMathPlain = `No tax (≤ PKR 600,000).`;
+        slabMathHTML = slabMathPlain;
       } else {
         const marginalBase = taxableIncome - appliedSlab.base;
         const marginalTax = marginalBase * appliedSlab.rate;
-        slabMath = `PKR ${formatPKR(appliedSlab.fixed)} + ${Math.round(appliedSlab.rate*100)}% × (PKR ${formatPKR(taxableIncome)} − PKR ${formatPKR(appliedSlab.base)})
-                    = PKR ${formatPKR(appliedSlab.fixed)} + PKR ${formatPKR(marginalTax)}
-                    = PKR ${formatPKR(appliedSlab.fixed + marginalTax)}`;
-        if (taxResult.surchargeApplied) {
-          slabMath += ` + 9% surcharge`;
-        }
+        const preSurcharge = appliedSlab.fixed + marginalTax;
+
+        slabMathPlain =
+          `PKR ${formatPKR(appliedSlab.fixed)} + ${Math.round(appliedSlab.rate*100)}% × (PKR ${formatPKR(taxableIncome)} − PKR ${formatPKR(appliedSlab.base)}) = PKR ${formatPKR(preSurcharge)}` +
+          (taxResult.surchargeApplied ? `, then +9% surcharge` : ``);
+
+        slabMathHTML =
+          `PKR ${formatPKR(appliedSlab.fixed)} + ${Math.round(appliedSlab.rate*100)}% × (PKR ${formatPKR(taxableIncome)} − PKR ${formatPKR(appliedSlab.base)}) = PKR ${formatPKR(preSurcharge)}` +
+          (taxResult.surchargeApplied ? ` <span class="pill warn" style="margin-left:8px;">+9% Surcharge</span>` : ``);
       }
 
-      // Allocation denominator
-      let denom = effectiveMonths; // average method
-      if (method === "payroll") denom = countRemainingMonthsInFY(start, fyEnd);
+      // Option A allocation
+      const taxPerEffectiveMonth = effectiveMonths > 0 ? (totalTax / effectiveMonths) : 0;
 
-      const taxPerUnit = denom > 0 ? (totalTax / denom) : 0;
-
-      // Build schedule
       let cumulativeTax = 0;
       const schedule = rows.map(r => {
         const income = salary * r.fraction;
-
-        let taxThisMonth = 0;
-        if (method === "average") {
-          taxThisMonth = taxPerUnit * r.fraction;
-        } else {
-          // payroll method: full month tax, optionally prorated
-          taxThisMonth = payrollProrate ? (taxPerUnit * r.fraction) : taxPerUnit;
-        }
-
+        const taxThisMonth = taxPerEffectiveMonth * r.fraction;
         cumulativeTax += taxThisMonth;
 
         return {
@@ -636,25 +805,18 @@
 
       setText("rPeriod", `${formatDateSafe(start)} to ${formatDateSafe(end)}`);
       setText("rEffMonths", effectiveMonths.toFixed(4));
+      setHTML("rSlab", appliedSlab.label);
+      setHTML("rSlabMath", slabMathHTML);
 
-      const methodLabel =
-        method === "average"
-          ? "Method A: Average (fraction-based)"
-          : `Method B: Payroll-style (remaining FY months)${payrollProrate ? " — prorated partial month" : ""}`;
-
-      setText("rMethod", methodLabel);
-      setHTML("rSlab", `${appliedSlab.label}`);
-      setHTML("rSlabMath", slabMath);
-
-      // Notes
       const surchargePill = taxResult.surchargeApplied
         ? `<span class="pill warn">9% Surcharge Applied</span>`
         : `<span class="pill good">No Surcharge</span>`;
+
       setHTML("noteBlock",
         `Notes: simplified estimator; exemptions/allowances/rebates not included. ${surchargePill}`
       );
 
-      // Render slab table + highlight applied
+      // Render slab table highlight
       renderSlabTable(appliedSlab.id);
 
       // Render schedule table
@@ -671,10 +833,54 @@
         `;
         tbody.appendChild(tr);
       }
+
+      // Save state for export
+      state.inputs = {
+        salary,
+        periodStart: formatDateSafe(start),
+        periodEnd: formatDateSafe(end)
+      };
+      state.taxableIncome = taxableIncome;
+      state.totalTax = totalTax;
+      state.effectiveMonths = effectiveMonths;
+      state.appliedSlab = appliedSlab;
+      state.slabMathPlain = slabMathPlain;
+      state.surchargeApplied = taxResult.surchargeApplied;
+      state.schedule = schedule;
+
+      enableExports(true);
+    });
+
+    // Copy button
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      try{
+        const text = buildSummaryText();
+        await navigator.clipboard.writeText(text);
+        showToast("Copied ✅");
+      }catch(e){
+        alert("Copy failed. Your browser may block clipboard access.");
+      }
+    });
+
+    // CSV button
+    document.getElementById("csvBtn").addEventListener("click", () => {
+      downloadCSV();
+    });
+
+    // PDF button
+    document.getElementById("pdfBtn").addEventListener("click", () => {
+      try{
+        downloadPDF();
+      }catch(e){
+        alert("PDF failed to generate. Please try again.");
+      }
     });
 
     // Initial slab table render (no highlight)
     renderSlabTable(-1);
+
+    // Exports disabled until first calculation
+    enableExports(false);
   </script>
 </body>
 </html>
