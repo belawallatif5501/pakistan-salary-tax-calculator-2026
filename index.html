@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pakistan Salary Tax Calculator 2025–26</title>
+  <style>
+    body{font-family:Arial,system-ui,sans-serif;background:#f6f7fb;margin:0;padding:40px}
+    .card{max-width:720px;margin:auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+    label{display:block;margin-top:14px;font-weight:600}
+    input,select,button{width:100%;padding:12px;margin-top:8px;border:1px solid #d9dbe3;border-radius:10px;font-size:14px}
+    button{background:#0a66c2;color:#fff;border:none;font-weight:700;cursor:pointer;margin-top:18px}
+    .note{font-size:12px;color:#555;margin-top:10px}
+    .box{margin-top:16px;padding:14px;border-radius:10px;background:#f2f4f8}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Pakistan Salary Tax Calculator (2025–26)</h2>
+    <div class="note">Next: we’ll add official slabs + partial-period (joining/leaving mid-month).</div>
+
+    <label>Monthly Salary (PKR)</label>
+    <input id="monthlySalary" type="number" placeholder="e.g., 250000" />
+
+    <label>Start Date (Joining)</label>
+    <input id="startDate" type="date" />
+
+    <label>End Date (Leaving) — optional</label>
+    <input id="endDate" type="date" />
+
+    <button id="calcBtn">Calculate</button>
+
+    <div class="box" id="output">Result will appear here.</div>
+  </div>
+
+  <script>
+    document.getElementById('calcBtn').addEventListener('click', () => {
+      document.getElementById('output').innerText =
+        'UI added ✅ Next step: tax slabs + partial-period calculation logic.';
+    });
+  </script>
+</body>
+</html>
