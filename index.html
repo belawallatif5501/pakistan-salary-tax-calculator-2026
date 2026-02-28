@@ -393,6 +393,17 @@
   <div class="toast" id="toast">Copied</div>
 
   <script>
+    // =========================
+    // PDF Branding Settings
+    // =========================
+    const BRAND_URL = "https://pakistan-salary-tax-calculator-2026.daybook.com.pk";
+
+    // Put your PUBLIC logo URL here (PNG/JPG).
+    // Example options:
+    // - Upload logo file into this GitHub repo and use raw.githubusercontent URL
+    // - Host it on your domain and paste URL
+    const LOGO_URL = "https://raw.githubusercontent.com/belawallatif5501/pakistan-salary-tax-calculator-2026/refs/heads/main/assets/Logo.jpg"; // <-- paste logo URL here
+
     // -------------------------
     // State (for Copy/CSV/PDF)
     // -------------------------
@@ -584,6 +595,8 @@
       for (const r of state.schedule){
         lines.push(`${r.label} | ${r.fraction.toFixed(4)} | ${formatPKR(r.income)} | ${formatPKR(r.tax)} | ${formatPKR(r.cumulative)}`);
       }
+      lines.push("");
+      lines.push(BRAND_URL);
       return lines.join("\n");
     }
 
@@ -602,6 +615,7 @@
         ["Applied Slab", slab ? slab.label : ""],
         ["Slab Calculation", state.slabMathPlain],
         ["Surcharge Applied", state.surchargeApplied ? "Yes (9%)" : "No"],
+        ["Source", BRAND_URL],
         [],
         ["Month","Income Fraction","Income (approx)","Tax Allocated","Cumulative Tax"]
       ];
@@ -633,20 +647,66 @@
       URL.revokeObjectURL(url);
     }
 
-    function downloadPDF(){
+    // Convert image URL -> DataURL so jsPDF can embed it
+    async function imageUrlToDataUrl(url){
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) throw new Error("Logo fetch failed");
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function addFooter(doc, pageWidth, pageHeight){
+      doc.setFont("helvetica","normal");
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      const text = BRAND_URL;
+      const textWidth = doc.getTextWidth(text);
+      const x = pageWidth - 40 - textWidth;
+      const y = pageHeight - 24;
+      doc.text(text, x, y);
+      doc.setTextColor(0);
+    }
+
+    async function downloadPDF(){
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit:"pt", format:"a4" });
 
       const i = state.inputs;
       const slab = state.appliedSlab;
 
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
       const margin = 40;
       let y = 52;
 
-      const title = "Pakistan Salary Tax Calculator (FY 2025–26 / TY 2026)";
+      // ---- Header: Title (left) + Logo (top-right)
       doc.setFont("helvetica","bold");
       doc.setFontSize(14);
-      doc.text(title, margin, y);
+      doc.text("Pakistan Salary Tax Calculator (FY 2025–26 / TY 2026)", margin, y);
+
+      // Logo on top-right (if provided)
+      if (LOGO_URL && LOGO_URL.trim().length > 0) {
+        try{
+          const dataUrl = await imageUrlToDataUrl(LOGO_URL.trim());
+
+          // Keep logo small and clean
+          const logoW = 80;
+          const logoH = 28;
+          const logoX = pageWidth - margin - logoW;
+          const logoY = 28;
+
+          doc.addImage(dataUrl, "PNG", logoX, logoY, logoW, logoH);
+        }catch(e){
+          // If logo fails (CORS or bad URL), we silently skip.
+        }
+      }
+
       y += 18;
 
       doc.setFont("helvetica","normal");
@@ -708,13 +768,15 @@
 
       doc.setLineWidth(0.6);
       doc.setDrawColor(220);
-      doc.line(margin, y, 555, y);
+      doc.line(margin, y, pageWidth - margin, y);
       y += 12;
 
       doc.setFont("helvetica","normal");
       const rows = state.schedule.slice(0, 12);
       for (const r of rows){
-        if (y > 770) {
+        // new page handling
+        if (y > pageHeight - 60) {
+          addFooter(doc, pageWidth, pageHeight);
           doc.addPage();
           y = 52;
         }
@@ -725,6 +787,9 @@
         doc.text(formatPKR(r.cumulative), col[4], y);
         y += 14;
       }
+
+      // Footer on last page
+      addFooter(doc, pageWidth, pageHeight);
 
       doc.save(`salary-tax-ty2026_${i.periodStart}_to_${i.periodEnd}.pdf`);
     }
@@ -868,11 +933,11 @@
     });
 
     // PDF button
-    document.getElementById("pdfBtn").addEventListener("click", () => {
+    document.getElementById("pdfBtn").addEventListener("click", async () => {
       try{
-        downloadPDF();
+        await downloadPDF();
       }catch(e){
-        alert("PDF failed to generate. Please try again.");
+        alert("PDF failed to generate. If your logo URL blocks CORS, remove it or host it publicly.");
       }
     });
 
