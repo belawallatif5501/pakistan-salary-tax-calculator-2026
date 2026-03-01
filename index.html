@@ -192,7 +192,7 @@
     table{
       width:100%;
       border-collapse:collapse;
-      min-width:720px; /* allows horizontal scroll on mobile */
+      min-width:760px; /* slightly wider because we added a new column */
     }
     th, td{
       padding:10px 12px;
@@ -375,11 +375,12 @@
                 <th class="rightAlign">Income Fraction</th>
                 <th class="rightAlign">Income (approx)</th>
                 <th class="rightAlign">Tax Allocated</th>
+                <th class="rightAlign">Net Salary</th>
                 <th class="rightAlign">Cumulative Tax</th>
               </tr>
             </thead>
             <tbody id="scheduleTbody">
-              <tr><td colspan="5" style="color:#64748b;">Run a calculation to see the schedule.</td></tr>
+              <tr><td colspan="6" style="color:#64748b;">Run a calculation to see the schedule.</td></tr>
             </tbody>
           </table>
         </div>
@@ -608,9 +609,9 @@
       lines.push(`Slab Calculation: ${state.slabMathPlain}`);
       lines.push(`Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`);
       lines.push("");
-      lines.push("Monthly Schedule (Month | Fraction | Income | Tax Allocated | Cumulative)");
+      lines.push("Monthly Schedule (Month | Fraction | Income | Tax Allocated | Net Salary | Cumulative)");
       for (const r of state.schedule){
-        lines.push(`${r.label} | ${r.fraction.toFixed(4)} | ${formatPKR(r.income)} | ${formatPKR(r.tax)} | ${formatPKR(r.cumulative)}`);
+        lines.push(`${r.label} | ${r.fraction.toFixed(4)} | ${formatPKR(r.income)} | ${formatPKR(r.tax)} | ${formatPKR(r.net)} | ${formatPKR(r.cumulative)}`);
       }
       lines.push("");
       lines.push(DISCLAIMER_TEXT);
@@ -636,7 +637,7 @@
         ["Disclaimer", DISCLAIMER_TEXT],
         ["Source", BRAND_URL],
         [],
-        ["Month","Income Fraction","Income (approx)","Tax Allocated","Cumulative Tax"]
+        ["Month","Income Fraction","Income (approx)","Tax Allocated","Net Salary","Cumulative Tax"]
       ];
 
       const scheduleRows = state.schedule.map(r => ([
@@ -644,6 +645,7 @@
         r.fraction.toFixed(6),
         Math.round(r.income),
         Math.round(r.tax),
+        Math.round(r.net),
         Math.round(r.cumulative)
       ]));
 
@@ -804,13 +806,14 @@
       y += 14;
       doc.setTextColor(0,0,0);
 
-      const col = [margin, margin+120, margin+220, margin+340, margin+460];
+      const col = [margin, margin+120, margin+220, margin+340, margin+450, margin+560];
       doc.setFont("helvetica","bold");
       doc.text("Month", col[0], y);
       doc.text("Fraction", col[1], y);
       doc.text("Income", col[2], y);
       doc.text("Tax", col[3], y);
-      doc.text("Cum Tax", col[4], y);
+      doc.text("Net", col[4], y);
+      doc.text("Cum Tax", col[5], y);
       y += 10;
 
       doc.setLineWidth(0.6);
@@ -831,7 +834,8 @@
         doc.text(r.fraction.toFixed(4), col[1], y);
         doc.text(formatPKR(r.income), col[2], y);
         doc.text(formatPKR(r.tax), col[3], y);
-        doc.text(formatPKR(r.cumulative), col[4], y);
+        doc.text(formatPKR(r.net), col[4], y);
+        doc.text(formatPKR(r.cumulative), col[5], y);
         y += 14;
       }
 
@@ -916,6 +920,7 @@
       const schedule = rows.map(r => {
         const income = salary * r.fraction;
         const taxThisMonth = taxPerEffectiveMonth * r.fraction;
+        const net = income - taxThisMonth;
         cumulativeTax += taxThisMonth;
 
         return {
@@ -923,6 +928,7 @@
           fraction: r.fraction,
           income,
           tax: taxThisMonth,
+          net,
           cumulative: cumulativeTax
         };
       });
@@ -954,6 +960,7 @@
           <td class="rightAlign">${s.fraction.toFixed(4)}</td>
           <td class="rightAlign">PKR ${formatPKR(s.income)}</td>
           <td class="rightAlign">PKR ${formatPKR(s.tax)}</td>
+          <td class="rightAlign">PKR ${formatPKR(s.net)}</td>
           <td class="rightAlign">PKR ${formatPKR(s.cumulative)}</td>
         `;
         tbody.appendChild(tr);
