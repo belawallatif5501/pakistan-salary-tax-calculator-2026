@@ -3,8 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
   <title>FBR Salary Tax Calculator (Tax Year 2026)</title>
+
+  <!-- ✅ Favicon (place favicon.png in /assets) -->
   <link rel="icon" type="image/png" href="./assets/favicon.png" />
+
   <!-- jsPDF for PDF download (client-side) -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
@@ -18,105 +22,175 @@
       --blue:#0a66c2;
       --blue2:#0b5cad;
       --soft:#f1f5f9;
-      --soft2:#eef2ff;
-      --good:#16a34a;
-      --warn:#f59e0b;
+      --chip:#eef2ff;
       --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
       --radius:14px;
 
-      /* QBO-ish weights */
-      --fw-regular: 400;
-      --fw-medium: 500;
-      --fw-semibold: 600;
-      --fw-bold: 700;
+      /* Less “aggressive” warning colors */
+      --warnBg:#fff7ed;
+      --warnBorder:#fed7aa;
+      --warnText:#9a3412;
 
-      /* Subtle warning colors */
-      --noteBorder:#e5e7eb;
-      --noteBg:#fafafa;
-      --noteText:#334155;
+      --dangerBg:#fff1f2;
+      --dangerBorder:#fecdd3;
+      --dangerText:#9f1239;
     }
 
     *{box-sizing:border-box}
-
     body{
       margin:0;
-      font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans", sans-serif;
+      /* ✅ QBO-like (less bold overall) */
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
       background:var(--bg);
       color:var(--text);
       padding:22px;
+      font-weight:400;
     }
 
-    .container{max-width:1240px;margin:0 auto}
+    .container{max-width:1040px;margin:0 auto}
+/* Remove left-logo layout gap completely */
+.noLeftLogo{
+  gap: 0 !important;
+}
 
-    /* Header */
+/* Guidelines inside header: flush and aligned */
+.guidelineInHeader{
+  margin-top: 14px;     /* sits nicely under subtitle */
+  margin-bottom: 0;     /* prevents extra space below header */
+  width: 100%;
+}
+
+/* When guideline sits inside header, don't add external top/bottom spacing */
+.guidelineBar{
+  margin: 0;            /* IMPORTANT: remove the old external margins */
+}
+    /* =========================
+       Header (Fix gaps + align)
+       ========================= */
     .header{
       display:flex;
-      gap:12px;
+      gap:16px;
       align-items:flex-start;
       justify-content:space-between;
-      margin-bottom:12px;
+      margin-bottom:8px;
       flex-wrap:wrap;
     }
-    .titleWrap{display:flex;flex-direction:column;gap:6px}
+    .brandLeft{
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      flex:1;
+      min-width:0; /* ✅ allow shrink so right card stays on same line */
+    }
+    .brandLogo{
+      width:48px;height:48px;
+      border-radius:12px;
+      background:#fff;
+      border:1px solid var(--border);
+      box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+      display:flex;align-items:center;justify-content:center;
+      overflow:hidden;
+      flex:0 0 auto;
+    }
+    .brandLogo img{
+      width:34px;height:34px;object-fit:contain;
+      display:block;
+    }
+    .titleWrap{min-width:0}
     .title{
-      font-size:28px;
-      font-weight: var(--fw-bold);
-      letter-spacing:-0.03em;
+      font-size:40px;
+      font-weight:800;
+      letter-spacing:-0.02em;
       margin:0;
-      line-height:1.1;
+      line-height:1.05;
     }
-    .subtitle{
-      margin:0;
+    .subnote{
+      margin:8px 0 0 0;
       color:var(--muted);
-      line-height:1.55;
-      font-size:13px;
-      max-width:820px;
-      font-weight: var(--fw-regular);
+      line-height:1.5;
+      font-size:16px;
+      max-width:760px;
     }
-    .subtitle b{ color:var(--text); font-weight: var(--fw-semibold); }
+    .subnote b{color:var(--text);font-weight:700}
 
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      background:var(--soft2);
+    /* Right Tax Year box */
+    .taxYearBox{
+      background:var(--chip);
       border:1px solid #dbeafe;
-      color:#1e40af;
-      border-radius:999px;
-      font-size:12px;
-      font-weight: var(--fw-semibold);
-      height: fit-content;
+      border-radius:18px;
+      padding:16px 18px;
+      min-width:240px;
+
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+
+      flex:0 0 auto;
+      align-self:flex-start;
+    }
+    .taxYearLogo{
+      width:88px;
+      height:88px;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .taxYearLogo img{
+      width:66px;height:66px;object-fit:contain;display:block;
+    }
+    .taxYearText{
+      font-weight:800;
+      font-size:20px;
+      color:#1d4ed8;
+      letter-spacing:0.01em;
+    }
+
+    /* ✅ Desktop: force single-row header to avoid weird blank space */
+    @media(min-width:900px){
+      .header{flex-wrap:nowrap;}
+    }
+    @media(max-width:520px){
+      .title{font-size:30px}
+      .subnote{font-size:14px}
+      .taxYearBox{min-width:100%}
+    }
+
+    /* =========================
+       Guidelines bar
+       ========================= */
+    .guidelineBar{
+  margin:0;
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  cursor:pointer;
+  user-select:none;
+}
+    .guidelineBar:hover{background:#f3f6fb}
+    .guidelineTitle{
+      font-weight:800;
+      color:#1d4ed8;
+      font-size:14px;
       white-space:nowrap;
     }
-    .taxYearBlock{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  padding:14px 20px;
-  background:#eef2ff;
-  border:1px solid #dbeafe;
-  border-radius:16px;
-  min-width:160px;
-}
+    .guidelineHint{
+      color:var(--muted);
+      font-size:13px;
+    }
 
-.taxLogo{
-  height:58px;        /* Bigger logo */
-  width:auto;
-  object-fit:contain;
-}
-
-.taxYearText{
-  font-size:14px;
-  font-weight:700;
-  color:#1e40af;
-}
-
-    /* Layout */
-    .grid{ display:grid; gap:14px; }
-
+    /* =========================
+       Cards / Layout
+       ========================= */
     .card{
       background:var(--card);
       border:1px solid var(--border);
@@ -124,60 +198,31 @@
       box-shadow: var(--shadow);
     }
     .card .inner{ padding:16px; }
-
-    .sectionHead{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:10px;
-    }
-    .sectionTitle{
-      margin:0;
-      font-size:12px;
-      font-weight: var(--fw-bold);
-      letter-spacing:0.06em;
+    .card h3{
+      margin:0 0 10px 0;
+      font-size:13px;
+      letter-spacing:0.08em;
       color:#0b1220;
       text-transform:uppercase;
-    }
-    .sectionMeta{
-      font-size:12px;
-      color:var(--muted);
-      font-weight: var(--fw-medium);
-      white-space:nowrap;
-    }
-    .divider{
-      height:1px;
-      background:#eef2f7;
-      margin:12px 0;
+      font-weight:800;
     }
 
-    /* Form grid */
-    .formGrid{
-      display:grid;
-      gap:14px;
-      grid-template-columns: 1fr;
-    }
-    @media(min-width:720px){
-      .formGrid{ grid-template-columns: 1fr 1fr; }
-    }
-    @media(min-width:980px){
-      .formGrid{ grid-template-columns: 1fr 1fr 1fr; }
-    }
+    .grid{ display:grid; gap:14px; }
+
+    /* Form grid: mobile 1, tablet 2, desktop 3 */
+    .grid.form{ grid-template-columns: 1fr; }
+    @media(min-width:720px){ .grid.form{ grid-template-columns: 1fr 1fr; } }
+    @media(min-width:980px){ .grid.form{ grid-template-columns: 1.2fr 1fr 1fr; } }
 
     .field label{
       display:block;
       font-size:12px;
       color:#0b1220;
-      font-weight: var(--fw-semibold);
+      font-weight:700;
       margin-bottom:6px;
     }
-    .hint{
-      font-size:12px;
-      color:var(--muted);
-      margin-top:6px;
-      font-weight: var(--fw-regular);
-    }
+
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
 
     input{
       width:100%;
@@ -186,15 +231,19 @@
       border:1px solid var(--border);
       background:#fff;
       font-size:14px;
-      font-weight: var(--fw-regular);
       outline:none;
+      font-weight:500; /* ✅ less bold than before */
     }
     input:focus{
       border-color:#93c5fd;
       box-shadow:0 0 0 4px rgba(59,130,246,0.12);
     }
+    input:disabled{
+      background:#f8fafc;
+      color:#94a3b8;
+      cursor:not-allowed;
+    }
 
-    /* Buttons */
     .actions{
       display:flex;
       gap:10px;
@@ -206,7 +255,7 @@
       border:none;
       border-radius:12px;
       padding:12px 14px;
-      font-weight: var(--fw-bold);
+      font-weight:800;
       font-size:14px;
       cursor:pointer;
       transition:0.15s ease;
@@ -218,87 +267,65 @@
       background:#ffffff;
       color:#0b1220;
       border:1px solid var(--border);
-      font-weight: var(--fw-semibold);
+      font-weight:800;
     }
     .btn.secondary:hover{ background:#f8fafc; }
+
     @media(min-width:720px){
       .btn{ width:auto; }
-      .btn.primary{ min-width:220px; }
+      .btn.primary{ min-width:200px; }
     }
 
-    /* KPI cards */
+    .twoCol{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    @media(min-width:980px){
+      .twoCol{ grid-template-columns: 1fr 1.15fr; } /* ✅ slab panel slightly wider */
+    }
+
     .kpis{
       display:grid;
       grid-template-columns: 1fr;
       gap:10px;
-      margin-top:6px;
+      margin-top:8px;
     }
     @media(min-width:720px){
       .kpis{ grid-template-columns: 1fr 1fr; }
     }
+
     .kpi{
       background:var(--soft);
       border:1px solid #e2e8f0;
       border-radius:12px;
       padding:12px;
     }
-    .kpi .label{
-      font-size:12px;
-      color:var(--muted);
-      font-weight: var(--fw-semibold);
-      margin-bottom:6px
-    }
-    .kpi .value{
-      font-size:18px;
-      font-weight: 800;
-      letter-spacing:-0.02em
-    }
+    .kpi .label{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px}
+    .kpi .value{font-size:18px;font-weight:900;letter-spacing:-0.02em}
 
-    /* Rows */
-    .rows{
-      margin-top:10px;
-      border:1px solid #eef2f7;
-      border-radius:12px;
-      overflow:hidden;
-      background:#fff;
-    }
     .row{
-      display:flex;
-      gap:12px;
-      align-items:flex-start;
-      justify-content:space-between;
+      display:flex; gap:10px; align-items:flex-start; justify-content:space-between;
       flex-wrap:wrap;
-      padding:10px 12px;
-      border-bottom:1px solid #eef2f7;
+      padding:10px 0;
+      border-bottom:1px dashed #e2e8f0;
     }
     .row:last-child{border-bottom:none}
-    .row .left{color:var(--muted);font-size:13px;font-weight: var(--fw-semibold);}
-    .row .right{font-size:13px;font-weight: var(--fw-bold);}
+    .row .left{color:var(--muted);font-size:13px;font-weight:700}
+    .row .right{font-size:13px;font-weight:800}
 
     .pill{
-      display:inline-flex;
-      align-items:center;
+      display:inline-flex; align-items:center;
       padding:6px 10px;
       border-radius:999px;
       font-size:12px;
-      font-weight: var(--fw-semibold);
+      font-weight:800;
       border:1px solid var(--border);
       background:#fff;
       color:#0b1220;
     }
     .pill.good{ background:#ecfdf5; border-color:#bbf7d0; color:#065f46; }
     .pill.warn{ background:#fffbeb; border-color:#fde68a; color:#92400e; }
-
-    /* Two-column area */
-    .twoCol{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:14px;
-      margin-top:14px;
-    }
-    @media(min-width:980px){
-      .twoCol{ grid-template-columns: 0.95fr 1.25fr; } /* slabs a bit wider */
-    }
 
     /* Tables */
     .tableWrap{
@@ -326,7 +353,7 @@
       position:sticky;
       top:0;
       z-index:1;
-      font-weight: var(--fw-semibold);
+      font-weight:800;
     }
     .trApplied{ background:#eef2ff; }
     .rightAlign{ text-align:right; }
@@ -335,22 +362,23 @@
       margin-top:10px;
       font-size:12px;
       color:var(--muted);
-      line-height:1.55;
-      font-weight: var(--fw-regular);
+      line-height:1.5;
     }
 
-    /* Subtle note/disclaimer (single line) */
-    .noteBar{
-      border:1px solid var(--noteBorder);
-      background:var(--noteBg);
-      border-radius:12px;
+    /* ✅ Combined short note (less distractive) */
+    .noticeLine{
+      margin-top:12px;
       padding:10px 12px;
-      color:var(--noteText);
-      font-weight: var(--fw-medium);
+      border-radius:12px;
+      background:var(--warnBg);
+      border:1px solid var(--warnBorder);
+      color:var(--warnText);
       font-size:12px;
-      line-height:1.55;
+      font-weight:700;
+      line-height:1.35;
     }
 
+    /* Toast */
     .toast{
       position:fixed;
       left:50%;
@@ -361,78 +389,177 @@
       padding:10px 14px;
       border-radius:999px;
       font-size:12px;
-      font-weight: var(--fw-semibold);
+      font-weight:800;
       opacity:0;
       pointer-events:none;
       transition:opacity .2s ease;
     }
     .toast.show{ opacity:1; }
+
+    /* =========================
+       Modal
+       ========================= */
+    .modalOverlay{
+      position:fixed;
+      inset:0;
+      background:rgba(2, 6, 23, 0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:9999;
+    }
+    .modalOverlay.show{ display:flex; }
+
+    .modalCard{
+      width:min(760px, 100%);
+      background:#fff;
+      border-radius:18px;
+      border:1px solid var(--border);
+      box-shadow: 0 24px 70px rgba(2, 6, 23, 0.22);
+      overflow:hidden;
+    }
+    .modalHeader{
+      padding:14px 16px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      background:#fbfdff;
+    }
+    .modalTitle{
+      font-weight:900;
+      font-size:16px;
+      color:#0b1220;
+    }
+    .modalSub{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:4px;
+      font-weight:600;
+    }
+    .modalClose{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:12px;
+      padding:8px 10px;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .modalBody{
+      padding:14px 16px;
+    }
+    .modalSection{ margin-bottom:12px; }
+    .modalSectionTitle{
+      font-weight:900;
+      font-size:13px;
+      margin-bottom:6px;
+      color:#0b1220;
+    }
+    .modalList{
+      margin:0;
+      padding-left:18px;
+      color:#0f172a;
+      font-size:13px;
+      line-height:1.55;
+    }
+    .modalNote{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--dangerBorder);
+      background:var(--dangerBg);
+      color:var(--dangerText);
+      font-size:12px;
+      font-weight:800;
+    }
+    .modalFooter{
+      padding:12px 16px;
+      border-top:1px solid var(--border);
+      display:flex;
+      justify-content:flex-end;
+      background:#fbfdff;
+    }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <div class="header">
-  <div style="display:flex;gap:12px;align-items:flex-start;">
-        <div class="titleWrap">
-        <h1 class="title">FBR Salary Tax Calculator</h1>
-        <p class="subtitle">
-          Uses <b>FBR salary (Section 149) slab rates</b> and supports partial months using day-based fractions.
-          This is a <b>simplified estimator</b> (no exemptions/allowances/rebates/other income).
-        </p>
-      </div>
-      </div>
-      <div class="taxYearBlock">
-  <img src="./assets/logo.png" alt="Logo" class="taxLogo" />
-  <div class="taxYearText">Tax Year 2026</div>
-</div>
-    </div>
 
-    <!-- INPUTS -->
+    <!-- HEADER -->
+<div class="header">
+  <div class="brandLeft noLeftLogo">
+    <div class="titleWrap">
+      <h1 class="title">FBR Salary Tax Calculator</h1>
+
+      <p class="subnote">
+        Uses FBR salary (Section 149) slab rates and supports partial months using day-based fractions.
+        This is a simplified estimator (no exemptions/allowances/rebates/other income).
+      </p>
+
+      <!-- ✅ Move guideline bar INTO header blank space -->
+      <div class="guidelineBar guidelineInHeader" id="openGuidelines" role="button" tabindex="0" aria-label="Open guidelines">
+        <div class="guidelineTitle">Guidelines / How to use</div>
+        <div class="guidelineHint">Click to view assumptions & usage notes.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="taxYearBox" aria-label="Tax year card">
+    <div class="taxYearLogo">
+      <img src="./assets/logo.png" alt="Daybook Logo" />
+    </div>
+    <div class="taxYearText">Tax Year 2026</div>
+  </div>
+</div>
+
+    <!-- FORM -->
     <div class="card">
       <div class="inner">
-        <div class="sectionHead">
-          <h3 class="sectionTitle">Inputs</h3>
-          <div class="sectionMeta">For HR / Tax Department use</div>
-        </div>
 
-        <div class="divider"></div>
-
-        <div class="formGrid">
+        <div class="grid form">
           <div class="field">
             <label>Employee Name</label>
             <input id="empName" type="text" placeholder="e.g., Ali Khan" />
-            <div class="hint">Optional. Used in PDF/CSV filename and report header.</div>
+            <div class="hint">Optional for company printout and file naming.</div>
           </div>
 
           <div class="field">
             <label>Company Name</label>
             <input id="companyName" type="text" placeholder="e.g., Daybook Pvt Ltd" />
-            <div class="hint">Optional. Used in PDF/CSV filename and report header.</div>
+            <div class="hint">Optional for company printout and file naming.</div>
           </div>
 
           <div class="field">
             <label>Employee ID</label>
             <input id="employeeId" type="text" placeholder="e.g., EMP-1024" />
-            <div class="hint">Optional.</div>
+            <div class="hint">Optional for company printout.</div>
+          </div>
+
+          <!-- ✅ Monthly vs Annual -->
+          <div class="field">
+            <label>Monthly Salary (PKR)</label>
+            <input id="monthlySalary" type="number" min="0" step="1" placeholder="e.g., 250000" />
+            <div class="hint">Enter monthly taxable salary (simplified). Leave blank if using annual.</div>
           </div>
 
           <div class="field">
-            <label>Monthly Salary (PKR)</label>
-            <input id="monthlySalary" type="number" placeholder="e.g., 250000" />
-            <div class="hint">Enter monthly taxable salary (simplified).</div>
+            <label>Annual Salary (PKR)</label>
+            <input id="annualSalary" type="number" min="0" step="1" placeholder="e.g., 3000000" />
+            <div class="hint">If entered, schedule will be evenly split across 12 months.</div>
           </div>
 
           <div class="field">
             <label>Start Date (Joining within tax year)</label>
             <input id="startDate" type="date" />
-            <div class="hint">If blank, assumes 2025-07-01</div>
+            <div class="hint" id="startHint">If blank, assumes 2025-07-01</div>
           </div>
 
           <div class="field">
-            <label>End Date (Leaving within tax year)</label>
+            <label>End Date (Leaving within tax year) — optional</label>
             <input id="endDate" type="date" />
-            <div class="hint">If blank, assumes 2026-06-30</div>
+            <div class="hint" id="endHint">If blank, assumes 2026-06-30</div>
           </div>
         </div>
 
@@ -443,22 +570,22 @@
           <button class="btn secondary" id="pdfBtn" disabled>Download PDF</button>
         </div>
 
-        <div class="footerNote" style="margin-top:10px;">
-          <b>Allocation method:</b> Tax per effective month × month fraction — purely tax perspective.
+        <div class="hint" style="margin-top:10px;">
+          Allocation method: <b>Tax per effective month × month fraction</b> — purely tax perspective.
+        </div>
+
+        <!-- ✅ Combined short line (note + warning + disclaimer style) -->
+        <div class="noticeLine" id="noticeLine">
+          Estimate only — allocation is for transparency; actual payroll withholding may vary; rounding differences may occur; refer to official FBR law/notifications for final position (no liability assumed).
         </div>
       </div>
     </div>
 
     <!-- RESULTS + SLABS -->
-    <div class="twoCol">
+    <div class="twoCol" style="margin-top:14px;">
       <div class="card">
         <div class="inner">
-          <div class="sectionHead">
-            <h3 class="sectionTitle">Results</h3>
-            <div class="sectionMeta" id="resultStamp">—</div>
-          </div>
-
-          <div class="divider"></div>
+          <h3>Results</h3>
 
           <div class="kpis">
             <div class="kpi">
@@ -471,7 +598,7 @@
             </div>
           </div>
 
-          <div class="rows">
+          <div style="margin-top:10px;">
             <div class="row">
               <div class="left">Period</div>
               <div class="right" id="rPeriod">—</div>
@@ -490,7 +617,7 @@
             </div>
           </div>
 
-          <div class="footerNote" id="noteBlock" style="margin-top:10px;">
+          <div class="footerNote" id="noteBlock">
             Notes: simplified estimator; exemptions/allowances/rebates not included.
           </div>
         </div>
@@ -498,13 +625,7 @@
 
       <div class="card">
         <div class="inner">
-          <div class="sectionHead">
-            <h3 class="sectionTitle">Salary Slabs Used</h3>
-            <div class="sectionMeta">Tax Year 2026</div>
-          </div>
-
-          <div class="divider"></div>
-
+          <h3>Salary Slabs Used</h3>
           <div class="tableWrap">
             <table id="slabTable">
               <thead>
@@ -518,7 +639,6 @@
               <tbody id="slabTbody"></tbody>
             </table>
           </div>
-
           <div class="footerNote">
             Highlight shows the slab applied to your taxable income.
           </div>
@@ -529,14 +649,11 @@
     <!-- MONTHLY SCHEDULE -->
     <div class="card" style="margin-top:14px;">
       <div class="inner">
-        <div class="sectionHead">
-          <h3 class="sectionTitle">Monthly Schedule</h3>
-          <div class="sectionMeta">Income & tax allocated by fractions</div>
+        <h3>Monthly Schedule</h3>
+        <div class="footerNote" style="margin-top:-4px;">
+          Income uses day-based fractions (monthly mode) or equal split (annual mode).
         </div>
-
-        <div class="divider"></div>
-
-        <div class="tableWrap">
+        <div class="tableWrap" style="margin-top:10px;">
           <table>
             <thead>
               <tr>
@@ -556,41 +673,83 @@
       </div>
     </div>
 
-    <!-- SINGLE-LINE NOTE (combined note + warning + disclaimer) -->
-    <div class="card" style="margin-top:14px;">
-      <div class="inner">
-        <div class="sectionHead">
-          <h3 class="sectionTitle">Note</h3>
-          <div class="sectionMeta">Estimate & reference</div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">Copied</div>
+
+  <!-- GUIDELINES MODAL -->
+  <div class="modalOverlay" id="guidelinesOverlay" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="guidelinesTitle">
+      <div class="modalHeader">
+        <div>
+          <div class="modalTitle" id="guidelinesTitle">Guidelines</div>
+          <div class="modalSub">How to use & assumptions (Tax Year 2026)</div>
+        </div>
+        <button class="modalClose" id="closeGuidelines" type="button" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="modalSection">
+          <div class="modalSectionTitle">How to use</div>
+          <ul class="modalList">
+            <li>Enter <b>either</b> Monthly Salary or Annual Salary (only one).</li>
+            <li>If using Monthly Salary, optionally select Start/End dates for partial-year employment.</li>
+            <li>If using Annual Salary, Start/End dates are locked and schedule is split evenly across 12 months.</li>
+            <li>Click <b>Calculate</b> to see total tax and monthly allocation schedule.</li>
+            <li>Use <b>Download PDF/CSV</b> for HR sharing and employee record.</li>
+          </ul>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="noteBar" id="disclaimerText">
-          Estimate only (Section 149 salary slabs). Withholding may vary by employer policy and rounding; refer to official FBR law/notifications for final position. No liability assumed.
+        <div class="modalSection">
+          <div class="modalSectionTitle">Assumptions</div>
+          <ul class="modalList">
+            <li>Based on <b>FBR Salary slabs (Section 149)</b> for <b>Tax Year 2026</b>.</li>
+            <li>Partial months are calculated using <b>day-based fractions</b> (monthly mode).</li>
+            <li>Tax allocation is for transparency; <b>actual payroll withholding may vary</b> by employer policy.</li>
+            <li>Rounding differences may occur in allocation.</li>
+          </ul>
         </div>
+
+        <div class="modalSection">
+          <div class="modalSectionTitle">Not included</div>
+          <ul class="modalList">
+            <li>Exemptions, allowances, rebates, other income, credits, deductions, special cases.</li>
+            <li>Any employer-specific payroll adjustments or non-standard benefits.</li>
+          </ul>
+        </div>
+
+        <div class="modalNote">
+          Estimate only — refer to official FBR law/notifications for final position. No liability assumed.
+        </div>
+      </div>
+
+      <div class="modalFooter">
+        <button class="btn secondary" id="closeGuidelines2" type="button">Close</button>
       </div>
     </div>
   </div>
-
-  <div class="toast" id="toast">Copied</div>
 
   <script>
     // =========================
     // Branding (PDF + Copy)
     // =========================
-    const BRAND_URL = "https://salary-tax-calculator.daybook.com.pk/";
-    const LOGO_URL = "./assets/logo.png";
     const TAX_YEAR_LABEL = "Tax Year 2026";
+    const BRAND_URL = "https://salary-tax-calculator.daybook.com.pk/";
 
-    const DISCLAIMER_TEXT =
-      "Estimate only (Section 149 salary slabs). Withholding may vary by employer policy and rounding; refer to official FBR law/notifications for final position. No liability assumed.";
+    // ✅ Local logo for web header + PDF
+    // Put file at: ./assets/logo.png
+    const LOGO_LOCAL = "./assets/logo.png";
+
+    const ONE_LINE_DISCLAIMER =
+      "Estimate only — allocation is for transparency; actual payroll withholding may vary; rounding differences may occur; refer to official FBR law/notifications for final position (no liability assumed).";
 
     // -------------------------
     // State (for Copy/CSV/PDF)
     // -------------------------
     const state = {
       inputs: null,
+      mode: null, // "monthly" | "annual"
       taxableIncome: 0,
       totalTax: 0,
       effectiveMonths: 0,
@@ -620,31 +779,6 @@
       const m = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
       return `${y}-${m}-${day}`;
-    }
-
-    function todayISO() {
-      return formatDateSafe(new Date());
-    }
-
-    function sanitizeFilePart(s) {
-      return String(s || "")
-        .trim()
-        .replace(/\s+/g, " ")
-        .replace(/[\\/:*?"<>|]+/g, "-")
-        .replace(/[\u0000-\u001f]/g, "")
-        .slice(0, 60);
-    }
-
-    // ✅ Export name:
-    // Name (if provided) - Company (if provided) - Tax Year 2026 - Today's date
-    function buildExportFileName(ext) {
-      const i = state.inputs || {};
-      const parts = [];
-      if (i.empName && i.empName.trim()) parts.push(sanitizeFilePart(i.empName));
-      if (i.companyName && i.companyName.trim()) parts.push(sanitizeFilePart(i.companyName));
-      parts.push(TAX_YEAR_LABEL);
-      parts.push(todayISO());
-      return `${parts.join(" - ")}.${ext}`;
     }
 
     function clampDate(d, min, max) {
@@ -685,6 +819,31 @@
       document.getElementById("copyBtn").disabled = !enabled;
       document.getElementById("csvBtn").disabled = !enabled;
       document.getElementById("pdfBtn").disabled = !enabled;
+    }
+
+    function cleanFilePart(s){
+      return String(s || "")
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function buildExportBaseName(){
+      const i = state.inputs || {};
+      const parts = [];
+
+      const n = cleanFilePart(i.empName);
+      const c = cleanFilePart(i.companyName);
+      if (n) parts.push(n);
+      if (c) parts.push(c);
+
+      parts.push(TAX_YEAR_LABEL);
+      parts.push(formatDateSafe(new Date())); // today's date
+
+      // Example:
+      // "Belawal Latif - HBS Parking Solutions - Tax Year 2026 - 2026-03-02"
+      return parts.join(" - ");
     }
 
     // -------------------------
@@ -740,7 +899,7 @@
           : `${formatPKR(s.lo + 1)} – ${formatPKR(s.hi)}`;
 
         tr.innerHTML = `
-          <td>${s.label}<div style="color:#64748b;font-size:12px;margin-top:4px;font-weight:${getComputedStyle(document.documentElement).getPropertyValue('--fw-medium')};">(${range})</div></td>
+          <td>${s.label}<div style="color:#64748b;font-size:12px;margin-top:4px;">(${range})</div></td>
           <td class="rightAlign">PKR ${formatPKR(s.fixed)}</td>
           <td class="rightAlign">${Math.round(s.rate*100)}%</td>
           <td>${s.formula}</td>
@@ -786,6 +945,53 @@
     }
 
     // -------------------------
+    // Mode logic: monthly vs annual
+    // -------------------------
+    const elMonthly = document.getElementById("monthlySalary");
+    const elAnnual  = document.getElementById("annualSalary");
+    const elStart   = document.getElementById("startDate");
+    const elEnd     = document.getElementById("endDate");
+    const startHint = document.getElementById("startHint");
+    const endHint   = document.getElementById("endHint");
+
+    function syncSalaryInputs(){
+      const mVal = Number(elMonthly.value);
+      const aVal = Number(elAnnual.value);
+
+      // prevent negatives (also handled on calculate)
+      if (mVal < 0) elMonthly.value = "";
+      if (aVal < 0) elAnnual.value = "";
+
+      const hasMonthly = !!elMonthly.value;
+      const hasAnnual  = !!elAnnual.value;
+
+      // If annual entered: disable monthly + dates
+      if (hasAnnual){
+        elMonthly.disabled = true;
+        elStart.disabled = true;
+        elEnd.disabled = true;
+        startHint.textContent = "Locked (annual salary mode)";
+        endHint.textContent = "Locked (annual salary mode)";
+      } else {
+        elMonthly.disabled = false;
+        elStart.disabled = false;
+        elEnd.disabled = false;
+        startHint.textContent = "If blank, assumes 2025-07-01";
+        endHint.textContent = "If blank, assumes 2026-06-30";
+      }
+
+      // If monthly entered: disable annual
+      if (hasMonthly){
+        elAnnual.disabled = true;
+      } else {
+        elAnnual.disabled = false;
+      }
+    }
+
+    elMonthly.addEventListener("input", syncSalaryInputs);
+    elAnnual.addEventListener("input", syncSalaryInputs);
+
+    // -------------------------
     // Copy / CSV / PDF
     // -------------------------
     function buildSummaryText(){
@@ -793,12 +999,17 @@
       const slab = state.appliedSlab;
 
       const lines = [];
-      lines.push("FBR Salary Tax Calculator (Tax Year 2026)");
+      lines.push(`FBR Salary Tax Calculator (${TAX_YEAR_LABEL})`);
+      lines.push(`Mode: ${state.mode === "annual" ? "Annual salary" : "Monthly salary"}`);
       lines.push(`Employee Name: ${i.empName || "-"}`);
       lines.push(`Company Name: ${i.companyName || "-"}`);
       lines.push(`Employee ID: ${i.employeeId || "-"}`);
-      lines.push(`Monthly Salary: PKR ${formatPKR(i.salary)}`);
-      lines.push(`Period: ${i.periodStart} to ${i.periodEnd}`);
+      if (state.mode === "annual") {
+        lines.push(`Annual Salary: PKR ${formatPKR(i.annualSalary)}`);
+      } else {
+        lines.push(`Monthly Salary: PKR ${formatPKR(i.monthlySalary)}`);
+        lines.push(`Period: ${i.periodStart} to ${i.periodEnd}`);
+      }
       lines.push(`Effective Months: ${state.effectiveMonths.toFixed(4)}`);
       lines.push(`Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`);
       lines.push(`Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`);
@@ -811,7 +1022,7 @@
         lines.push(`${r.label} | ${r.fraction.toFixed(4)} | ${formatPKR(r.income)} | ${formatPKR(r.tax)} | ${formatPKR(r.net)} | ${formatPKR(r.cumulative)}`);
       }
       lines.push("");
-      lines.push(`Note: ${DISCLAIMER_TEXT}`);
+      lines.push(ONE_LINE_DISCLAIMER);
       lines.push(BRAND_URL);
       return lines.join("\n");
     }
@@ -821,24 +1032,35 @@
       const slab = state.appliedSlab;
 
       const headerRows = [
-        ["Report","FBR Salary Tax Calculator (Tax Year 2026)"],
+        ["Report", `FBR Salary Tax Calculator (${TAX_YEAR_LABEL})`],
+        ["Mode", state.mode === "annual" ? "Annual salary" : "Monthly salary"],
         ["Employee Name", i.empName || ""],
         ["Company Name", i.companyName || ""],
         ["Employee ID", i.employeeId || ""],
-        ["Monthly Salary (PKR)", i.salary],
-        ["Period Start", i.periodStart],
-        ["Period End", i.periodEnd],
+      ];
+
+      if (state.mode === "annual"){
+        headerRows.push(["Annual Salary (PKR)", i.annualSalary]);
+        headerRows.push(["Period Start", "2025-07-01"]);
+        headerRows.push(["Period End", "2026-06-30"]);
+      } else {
+        headerRows.push(["Monthly Salary (PKR)", i.monthlySalary]);
+        headerRows.push(["Period Start", i.periodStart]);
+        headerRows.push(["Period End", i.periodEnd]);
+      }
+
+      headerRows.push(
         ["Effective Months", state.effectiveMonths.toFixed(6)],
         ["Taxable Income (approx)", Math.round(state.taxableIncome)],
         ["Estimated Total Tax", Math.round(state.totalTax)],
         ["Applied Slab", slab ? slab.label : ""],
         ["Slab Calculation", state.slabMathPlain],
         ["Surcharge Applied", state.surchargeApplied ? "Yes (9%)" : "No"],
-        ["Note", DISCLAIMER_TEXT],
+        ["Note", ONE_LINE_DISCLAIMER],
         ["Source", BRAND_URL],
         [],
         ["Month","Income Fraction","Income (approx)","Tax Allocated","Net Salary","Cumulative Tax"]
-      ];
+      );
 
       const scheduleRows = state.schedule.map(r => ([
         r.label,
@@ -861,15 +1083,15 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = buildExportFileName("csv");
+      a.download = `${buildExportBaseName()}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     }
 
-    async function loadImageFromUrl(url) {
-      const res = await fetch(url, { mode: "cors" });
+    async function loadImageFromLocal(path) {
+      const res = await fetch(path);
       if (!res.ok) throw new Error("Logo fetch failed");
 
       const blob = await res.blob();
@@ -896,7 +1118,7 @@
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      doc.setTextColor(0, 102, 204);
+      doc.setTextColor(10, 102, 194);
 
       const text = BRAND_URL;
       const textWidth = doc.getTextWidth(text);
@@ -907,11 +1129,25 @@
       doc.setTextColor(0,0,0);
     }
 
-    function hr(doc, x1, x2, y){
-      doc.setDrawColor(230);
-      doc.setLineWidth(0.8);
-      doc.line(x1, y, x2, y);
-      doc.setDrawColor(0);
+    function ensurePageSpace(doc, y, needed, margin){
+      const pageHeight = doc.internal.pageSize.getHeight();
+      if (y + needed > pageHeight - margin) {
+        addFooter(doc);
+        doc.addPage();
+        return 52;
+      }
+      return y;
+    }
+
+    function ellipsize(doc, text, maxWidth){
+      const t = String(text ?? "");
+      if (doc.getTextWidth(t) <= maxWidth) return t;
+      const ell = "…";
+      let s = t;
+      while (s.length > 1 && doc.getTextWidth(s + ell) > maxWidth){
+        s = s.slice(0, -1);
+      }
+      return s + ell;
     }
 
     async function downloadPDF(){
@@ -923,196 +1159,262 @@
 
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-
       const margin = 40;
       let y = 52;
 
-      // Header title (left)
+      // Title
       doc.setFont("helvetica","bold");
       doc.setFontSize(14);
-      doc.text("FBR Salary Tax Calculator (Tax Year 2026)", margin, y);
+      doc.text(`FBR Salary Tax Calculator (${TAX_YEAR_LABEL})`, margin, y);
 
-      // Logo (top-right)
-      if (LOGO_URL && LOGO_URL.trim().length > 0) {
-        try{
-          const { dataUrl, width, height } = await loadImageFromUrl(LOGO_URL.trim());
-          const maxW = 150;
-          const maxH = 46;
-          const scale = Math.min(maxW / width, maxH / height);
-          const w = Math.round(width * scale);
-          const h = Math.round(height * scale);
+      // Logo (top-right) - big but clean
+      try{
+        const { dataUrl, width, height } = await loadImageFromLocal(LOGO_LOCAL);
+        const maxW = 120;
+        const maxH = 44;
+        const scale = Math.min(maxW / width, maxH / height);
+        const w = Math.round(width * scale);
+        const h = Math.round(height * scale);
 
-          const x = pageWidth - margin - w;
-          const yLogo = 22;
+        const x = pageWidth - margin - w;
+        const yLogo = 26;
 
-          const fmt = dataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
-          doc.addImage(dataUrl, fmt, x, yLogo, w, h);
-        } catch(e){ /* skip logo */ }
-      }
+        const fmt = dataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+        doc.addImage(dataUrl, fmt, x, yLogo, w, h);
+      } catch(e){ /* ignore logo */ }
 
-      y += 18;
+      y += 22;
 
-      // Subtitle + stamp
+      // Subtitle
       doc.setFont("helvetica","normal");
       doc.setFontSize(10);
       doc.setTextColor(60,60,60);
       doc.text("Simplified estimator (no exemptions/allowances/rebates/other income).", margin, y);
-      y += 12;
-
-      doc.setFontSize(9);
-      doc.text(`Generated on: ${todayISO()}    |    ${TAX_YEAR_LABEL}`, margin, y);
-      y += 14;
-
       doc.setTextColor(0,0,0);
-      hr(doc, margin, pageWidth - margin, y);
-      y += 14;
+      y += 18;
 
-      // Summary heading
+      // Summary block
       doc.setFont("helvetica","bold");
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.text("Summary", margin, y);
       y += 14;
 
       doc.setFont("helvetica","normal");
       doc.setFontSize(10);
 
-      // Employee block
-      const empLines = [
+      const leftLines = [
         `Employee Name: ${i.empName || "-"}`,
         `Company Name: ${i.companyName || "-"}`,
         `Employee ID: ${i.employeeId || "-"}`,
+        `Mode: ${state.mode === "annual" ? "Annual salary" : "Monthly salary"}`
       ];
-      for (const line of empLines){
-        if (y > pageHeight - 120) { addFooter(doc); doc.addPage(); y = 52; }
-        doc.text(line, margin, y);
-        y += 14;
+
+      const rightLines = [];
+
+      if (state.mode === "annual"){
+        rightLines.push(`Annual Salary: PKR ${formatPKR(i.annualSalary)}`);
+        rightLines.push(`Period: 2025-07-01 to 2026-06-30`);
+      } else {
+        rightLines.push(`Monthly Salary: PKR ${formatPKR(i.monthlySalary)}`);
+        rightLines.push(`Period: ${i.periodStart} to ${i.periodEnd}`);
       }
 
-      y += 6;
-      hr(doc, margin, pageWidth - margin, y);
-      y += 14;
-
-      // Numbers block
-      const summaryLines = [
-        `Monthly Salary: PKR ${formatPKR(i.salary)}`,
-        `Period: ${i.periodStart} to ${i.periodEnd}`,
+      rightLines.push(
         `Effective Months: ${state.effectiveMonths.toFixed(4)}`,
         `Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`,
         `Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`,
         `Applied Slab: ${slab ? slab.label : "-"}`,
-        `Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`,
-      ];
+        `Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`
+      );
 
-      for (const line of summaryLines){
-        if (y > pageHeight - 140) { addFooter(doc); doc.addPage(); y = 52; }
-        doc.text(line, margin, y);
+      // Two-column summary
+      const colGap = 22;
+      const colW = (pageWidth - margin*2 - colGap) / 2;
+      const leftX = margin;
+      const rightX = margin + colW + colGap;
+
+      // Left
+      for (const line of leftLines){
+        y = ensurePageSpace(doc, y, 14, 90);
+        doc.text(line, leftX, y);
         y += 14;
       }
 
-      y += 6;
-      hr(doc, margin, pageWidth - margin, y);
-      y += 14;
+      // Right (start from where left ended but keep consistent)
+      let yRight = 52 + 22 + 18 + 14; // approx start below "Summary"
+      yRight += (leftLines.length * 14) - (leftLines.length * 14); // keep explicit
 
-      // Slab calculation
+      // We want right side aligned with first left line under "Summary"
+      yRight = 52 + 22 + 18 + 14; // Title + subtitle + Summary heading lines
+      yRight += 14; // first line baseline
+      yRight = y - (leftLines.length * 14); // align to first left line
+
+      // Draw right lines
+      let yR = y - (leftLines.length * 14);
+      for (const line of rightLines){
+        yR = ensurePageSpace(doc, yR, 14, 90);
+        doc.text(line, rightX, yR);
+        yR += 14;
+      }
+
+      // Continue y after whichever is lower
+      y = Math.max(y, yR) + 8;
+
+      // Slab Calculation section
+      y = ensurePageSpace(doc, y, 28, 90);
       doc.setFont("helvetica","bold");
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.text("Slab Calculation", margin, y);
-      y += 12;
+      y += 14;
 
       doc.setFont("helvetica","normal");
       doc.setFontSize(10);
-
       const slabText = safePdfText(state.slabMathPlain || "-");
       const slabLines = doc.splitTextToSize(slabText, pageWidth - (margin * 2));
-      const slabHeight = slabLines.length * 12;
-
-      if (y + slabHeight > pageHeight - 140) {
-        addFooter(doc);
-        doc.addPage();
-        y = 52;
-      }
-
+      y = ensurePageSpace(doc, y, slabLines.length * 12 + 10, 90);
       doc.text(slabLines, margin, y);
-      y += slabHeight + 14;
+      y += slabLines.length * 12 + 10;
 
-      hr(doc, margin, pageWidth - margin, y);
+      // Monthly Schedule table
+      y = ensurePageSpace(doc, y, 26, 90);
+      doc.setFont("helvetica","bold");
+      doc.setFontSize(11);
+      doc.text("Monthly Schedule", margin, y);
       y += 14;
 
-      // Monthly schedule
-      doc.setFont("helvetica","bold");
-      doc.setFontSize(10);
-      doc.text("Monthly Schedule", margin, y);
-      y += 12;
+      // Table settings (fit A4)
+      const tableX = margin;
+      const tableW = pageWidth - margin*2;
 
-      // Fit table properly
-      const colsX = [margin, 140, 230, 330, 420, 510];
+      // Column widths (percent)
+      const colPerc = [0.16, 0.14, 0.18, 0.18, 0.16, 0.18]; // Month, Fraction, Income, Tax, Net, Cum
+      const colWpx = colPerc.map(p => Math.floor(tableW * p));
 
-      function drawScheduleHeader(atY){
+      const cols = [
+        { title:"Month",    w: colWpx[0], align:"left"  },
+        { title:"Fraction", w: colWpx[1], align:"right" },
+        { title:"Income",   w: colWpx[2], align:"right" },
+        { title:"Tax",      w: colWpx[3], align:"right" },
+        { title:"Net",      w: colWpx[4], align:"right" },
+        { title:"Cum Tax",  w: colWpx[5], align:"right" },
+      ];
+
+      const rowH = 16;
+      const headerH = 18;
+
+      function drawTableHeader(){
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(229, 231, 235);
+        doc.rect(tableX, y, tableW, headerH, "FD");
+
         doc.setFont("helvetica","bold");
         doc.setFontSize(9);
-        doc.text("Month",    colsX[0], atY);
-        doc.text("Fraction", colsX[1], atY);
-        doc.text("Income",   colsX[2], atY);
-        doc.text("Tax",      colsX[3], atY);
-        doc.text("Net",      colsX[4], atY);
-        doc.text("Cum Tax",  colsX[5], atY);
+        doc.setTextColor(15, 23, 42);
 
-        const lineY = atY + 10;
-        doc.setLineWidth(0.6);
-        doc.setDrawColor(220);
-        doc.line(margin, lineY, pageWidth - margin, lineY);
-        doc.setDrawColor(0);
-        return lineY + 12;
+        let cx = tableX;
+        for (const c of cols){
+          const tx = cx + 6;
+          const ty = y + 12;
+          const text = ellipsize(doc, c.title, c.w - 12);
+          doc.text(text, tx, ty);
+          cx += c.w;
+        }
+
+        y += headerH;
+        doc.setTextColor(0,0,0);
       }
 
-      y = drawScheduleHeader(y);
-
-      doc.setFont("helvetica","normal");
-      doc.setFontSize(9);
-
-      for (const r of state.schedule){
-        if (y > pageHeight - 80) {
+      function drawRow(r){
+        // new page if needed
+        if (y + rowH > pageHeight - 80){
           addFooter(doc);
           doc.addPage();
           y = 52;
-          y = drawScheduleHeader(y);
-          doc.setFont("helvetica","normal");
-          doc.setFontSize(9);
+          drawTableHeader();
         }
 
-        doc.text(r.label,                 colsX[0], y);
-        doc.text(r.fraction.toFixed(4),   colsX[1], y);
-        doc.text(formatPKR(r.income),     colsX[2], y);
-        doc.text(formatPKR(r.tax),        colsX[3], y);
-        doc.text(formatPKR(r.net),        colsX[4], y);
-        doc.text(formatPKR(r.cumulative), colsX[5], y);
-        y += 14;
+        doc.setFont("helvetica","normal");
+        doc.setFontSize(9);
+
+        // row line
+        doc.setDrawColor(238, 242, 247);
+        doc.line(tableX, y + rowH, tableX + tableW, y + rowH);
+
+        const values = [
+          r.label,
+          r.fraction.toFixed(4),
+          `PKR ${formatPKR(r.income)}`,
+          `PKR ${formatPKR(r.tax)}`,
+          `PKR ${formatPKR(r.net)}`,
+          `PKR ${formatPKR(r.cumulative)}`,
+        ];
+
+        let cx = tableX;
+        for (let k=0;k<cols.length;k++){
+          const c = cols[k];
+          const raw = values[k];
+
+          const maxTextW = c.w - 12;
+          const txt = ellipsize(doc, raw, maxTextW);
+
+          let tx = cx + 6;
+          if (c.align === "right"){
+            const w = doc.getTextWidth(txt);
+            tx = cx + c.w - 6 - w;
+          }
+          doc.text(txt, tx, y + 12);
+          cx += c.w;
+        }
+
+        y += rowH;
       }
 
-      y += 10;
-      if (y > pageHeight - 90) { addFooter(doc); doc.addPage(); y = 52; }
+      // Draw header + rows
+      drawTableHeader();
+      for (const r of state.schedule){
+        drawRow(r);
+      }
 
-      // Note (subtle, dark) – one line
+      // Note (one line) + footer link
+      y = ensurePageSpace(doc, y + 10, 40, 70);
       doc.setFont("helvetica","normal");
       doc.setFontSize(9);
-      doc.setTextColor(60,60,60);
-      const dLines = doc.splitTextToSize(`Note: ${DISCLAIMER_TEXT}`, pageWidth - (margin * 2));
-      doc.text(dLines, margin, y);
+      doc.setTextColor(120, 53, 15); // subtle warning tone
+      const noteLines = doc.splitTextToSize(ONE_LINE_DISCLAIMER, pageWidth - margin*2);
+      doc.text(noteLines, margin, y);
+      doc.setTextColor(0,0,0);
 
-      // Footer link
       addFooter(doc);
 
-      // ✅ new naming convention
-      doc.save(buildExportFileName("pdf"));
+      doc.save(`${buildExportBaseName()}.pdf`);
     }
 
     // -------------------------
     // Calculate
     // -------------------------
     document.getElementById("calcBtn").addEventListener("click", () => {
-      const salary = Number(document.getElementById("monthlySalary").value);
-      if (!salary || salary <= 0) {
-        alert("Please enter a valid monthly salary.");
+      const monthlyRaw = elMonthly.value.trim();
+      const annualRaw  = elAnnual.value.trim();
+
+      const monthlySalary = monthlyRaw ? Number(monthlyRaw) : 0;
+      const annualSalary  = annualRaw ? Number(annualRaw) : 0;
+
+      // ✅ Negative not allowed
+      if (monthlySalary < 0 || annualSalary < 0) {
+        alert("Salary cannot be negative.");
+        return;
+      }
+
+      // Must enter exactly one
+      const hasMonthly = !!monthlyRaw;
+      const hasAnnual  = !!annualRaw;
+
+      if (!hasMonthly && !hasAnnual){
+        alert("Please enter either Monthly Salary or Annual Salary.");
+        return;
+      }
+      if (hasMonthly && hasAnnual){
+        alert("Please enter only one: Monthly Salary or Annual Salary.");
         return;
       }
 
@@ -1120,18 +1422,89 @@
       const fyStart = new Date(2025, 6, 1);
       const fyEnd = new Date(2026, 5, 30);
 
-      const rawStart = parseLocalInputDate(document.getElementById("startDate").value) || fyStart;
-      const rawEnd = parseLocalInputDate(document.getElementById("endDate").value) || fyEnd;
+      let effectiveMonths = 12;
+      let taxableIncome = 0;
+      let schedule = [];
+      let periodStart = "2025-07-01";
+      let periodEnd = "2026-06-30";
+      let mode = hasAnnual ? "annual" : "monthly";
 
-      const s0 = rawStart.getTime() <= rawEnd.getTime() ? rawStart : rawEnd;
-      const e0 = rawStart.getTime() <= rawEnd.getTime() ? rawEnd : rawStart;
+      if (mode === "annual"){
+        taxableIncome = annualSalary; // annualized already
+        effectiveMonths = 12;
 
-      const start = clampDate(s0, fyStart, fyEnd);
-      const end = clampDate(e0, fyStart, fyEnd);
+        // Option 1: still show schedule
+        const incomePerMonth = annualSalary / 12;
+        const taxResult = salaryTaxTY2026(taxableIncome);
+        const totalTax = taxResult.tax;
+        const taxPerMonth = totalTax / 12;
 
-      const { total: effectiveMonths, rows } = computeMonthlyFractions(start, end);
-      const taxableIncome = salary * effectiveMonths;
+        let cumulativeTax = 0;
+        const months = [
+          { y:2025, m:6 },{ y:2025, m:7 },{ y:2025, m:8 },{ y:2025, m:9 },{ y:2025, m:10 },{ y:2025, m:11 },
+          { y:2026, m:0 },{ y:2026, m:1 },{ y:2026, m:2 },{ y:2026, m:3 },{ y:2026, m:4 },{ y:2026, m:5 },
+        ];
 
+        schedule = months.map(mm => {
+          cumulativeTax += taxPerMonth;
+          return {
+            label: `${monthName(mm.m)}-${String(mm.y).slice(-2)}`,
+            fraction: 1,
+            income: incomePerMonth,
+            tax: taxPerMonth,
+            net: incomePerMonth - taxPerMonth,
+            cumulative: cumulativeTax
+          };
+        });
+
+        // update UI later after computing tax result below
+      } else {
+        // Monthly mode with dates
+        if (!monthlySalary || monthlySalary <= 0) {
+          alert("Please enter a valid monthly salary.");
+          return;
+        }
+
+        const rawStart = parseLocalInputDate(elStart.value) || fyStart;
+        const rawEnd = parseLocalInputDate(elEnd.value) || fyEnd;
+
+        const s0 = rawStart.getTime() <= rawEnd.getTime() ? rawStart : rawEnd;
+        const e0 = rawStart.getTime() <= rawEnd.getTime() ? rawEnd : rawStart;
+
+        const start = clampDate(s0, fyStart, fyEnd);
+        const end = clampDate(e0, fyStart, fyEnd);
+
+        periodStart = formatDateSafe(start);
+        periodEnd = formatDateSafe(end);
+
+        const frac = computeMonthlyFractions(start, end);
+        effectiveMonths = frac.total;
+        taxableIncome = monthlySalary * effectiveMonths;
+
+        const taxResult = salaryTaxTY2026(taxableIncome);
+        const totalTax = taxResult.tax;
+
+        const taxPerEffectiveMonth = effectiveMonths > 0 ? (totalTax / effectiveMonths) : 0;
+
+        let cumulativeTax = 0;
+        schedule = frac.rows.map(r => {
+          const income = monthlySalary * r.fraction;
+          const taxThisMonth = taxPerEffectiveMonth * r.fraction;
+          const net = income - taxThisMonth;
+          cumulativeTax += taxThisMonth;
+
+          return {
+            label: `${monthName(r.m)}-${String(r.y).slice(-2)}`,
+            fraction: r.fraction,
+            income,
+            tax: taxThisMonth,
+            net,
+            cumulative: cumulativeTax
+          };
+        });
+      }
+
+      // Compute tax once (common)
       const taxResult = salaryTaxTY2026(taxableIncome);
       const totalTax = taxResult.tax;
       const appliedSlab = taxResult.slab;
@@ -1156,29 +1529,17 @@
           (taxResult.surchargeApplied ? ` <span class="pill warn" style="margin-left:8px;">+9% Surcharge</span>` : ``);
       }
 
-      const taxPerEffectiveMonth = effectiveMonths > 0 ? (totalTax / effectiveMonths) : 0;
-
-      let cumulativeTax = 0;
-      const schedule = rows.map(r => {
-        const income = salary * r.fraction;
-        const taxThisMonth = taxPerEffectiveMonth * r.fraction;
-        const net = income - taxThisMonth;
-        cumulativeTax += taxThisMonth;
-
-        return {
-          label: `${monthName(r.m)}-${String(r.y).slice(-2)}`,
-          fraction: r.fraction,
-          income,
-          tax: taxThisMonth,
-          net,
-          cumulative: cumulativeTax
-        };
-      });
-
+      // UI KPI
       setText("kpiIncome", `PKR ${formatPKR(taxableIncome)}`);
       setText("kpiTax", `PKR ${formatPKR(totalTax)}`);
 
-      setText("rPeriod", `${formatDateSafe(start)} to ${formatDateSafe(end)}`);
+      // Period + mode
+      if (mode === "annual"){
+        setText("rPeriod", `2025-07-01 to 2026-06-30 (annual salary mode)`);
+      } else {
+        setText("rPeriod", `${periodStart} to ${periodEnd}`);
+      }
+
       setText("rEffMonths", effectiveMonths.toFixed(4));
       setHTML("rSlab", appliedSlab.label);
       setHTML("rSlabMath", slabMathHTML);
@@ -1191,15 +1552,9 @@
         `Notes: simplified estimator; exemptions/allowances/rebates not included. ${surchargePill}`
       );
 
-      // result stamp (top-right of Results)
-      const who = [
-        document.getElementById("empName").value.trim(),
-        document.getElementById("companyName").value.trim()
-      ].filter(Boolean).join(" • ");
-      setText("resultStamp", who ? `${who} • ${todayISO()}` : todayISO());
-
       renderSlabTable(appliedSlab.id);
 
+      // Schedule table
       const tbody = document.getElementById("scheduleTbody");
       tbody.innerHTML = "";
       for (const s of schedule) {
@@ -1215,14 +1570,18 @@
         tbody.appendChild(tr);
       }
 
+      // Save state
       state.inputs = {
         empName: document.getElementById("empName").value.trim(),
         companyName: document.getElementById("companyName").value.trim(),
         employeeId: document.getElementById("employeeId").value.trim(),
-        salary,
-        periodStart: formatDateSafe(start),
-        periodEnd: formatDateSafe(end)
+        monthlySalary: mode === "monthly" ? monthlySalary : null,
+        annualSalary: mode === "annual" ? annualSalary : null,
+        periodStart,
+        periodEnd
       };
+
+      state.mode = mode;
       state.taxableIncome = taxableIncome;
       state.totalTax = totalTax;
       state.effectiveMonths = effectiveMonths;
@@ -1248,11 +1607,46 @@
 
     document.getElementById("pdfBtn").addEventListener("click", async () => {
       try{ await downloadPDF(); }
-      catch(e){ alert("PDF failed. If logo blocks loading, keep LOGO_URL as GitHub RAW link."); }
+      catch(e){ alert("PDF failed. Make sure assets/logo.png exists and is accessible."); }
     });
 
+    // Init
     renderSlabTable(-1);
     enableExports(false);
+    syncSalaryInputs();
+
+    // -------------------------
+    // Guidelines modal handlers
+    // -------------------------
+    const overlay = document.getElementById("guidelinesOverlay");
+    const openBtn = document.getElementById("openGuidelines");
+    const closeBtn = document.getElementById("closeGuidelines");
+    const closeBtn2 = document.getElementById("closeGuidelines2");
+
+    function openModal(){
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden","false");
+    }
+    function closeModal(){
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden","true");
+    }
+
+    openBtn.addEventListener("click", openModal);
+    openBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") openModal();
+    });
+
+    closeBtn.addEventListener("click", closeModal);
+    closeBtn2.addEventListener("click", closeModal);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeModal();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.classList.contains("show")) closeModal();
+    });
   </script>
 </body>
 </html>
