@@ -808,6 +808,8 @@ document.getElementById("calcBtn").addEventListener("click", () => {
   }
 
   setText("rEffMonths", effectiveMonths.toFixed(4));
+  const effTaxRate = taxableIncome > 0 ? (totalTax / taxableIncome) * 100 : 0;
+setText("rEffTaxRate", `${effTaxRate.toFixed(2)}%`);
   setHTML("rSlab", appliedSlab.label);
   setHTML("rSlabMath", slabMathHTML);
 
