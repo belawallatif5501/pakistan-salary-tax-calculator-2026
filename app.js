@@ -264,6 +264,7 @@ elAnnual.addEventListener("input", syncSalaryInputs);
 function buildSummaryText(){
   const i = state.inputs;
   const slab = state.appliedSlab;
+  const effTaxRate = state.taxableIncome > 0 ? (state.totalTax / state.taxableIncome) * 100 : 0;
 
   const lines = [];
   lines.push(`FBR Salary Tax Calculator (${TAX_YEAR_LABEL})`);
@@ -486,13 +487,14 @@ async function downloadPDF(){
     rightLines.push(`Period: ${i.periodStart} to ${i.periodEnd}`);
   }
 
-  rightLines.push(
-    `Effective Months: ${state.effectiveMonths.toFixed(4)}`,
-    `Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`,
-    `Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`,
-    `Applied Slab: ${slab ? slab.label : "-"}`,
-    `Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`
-  );
+  rrightLines.push(
+  `Effective Months: ${state.effectiveMonths.toFixed(4)}`,
+  `Effective Tax Rate: ${effTaxRate.toFixed(2)}%`,
+  `Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`,
+  `Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`,
+  `Applied Slab: ${slab ? slab.label : "-"}`,
+  `Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`
+);
 
   // Two-column summary
   const colGap = 22;
