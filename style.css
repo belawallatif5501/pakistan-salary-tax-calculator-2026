@@ -1,0 +1,468 @@
+:root{
+  --bg:#f6f7fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --border:#e5e7eb;
+  --blue:#0a66c2;
+  --blue2:#0b5cad;
+  --soft:#f1f5f9;
+  --chip:#eef2ff;
+  --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+  --radius:14px;
+
+  /* Less “aggressive” warning colors */
+  --warnBg:#fff7ed;
+  --warnBorder:#fed7aa;
+  --warnText:#9a3412;
+
+  --dangerBg:#fff1f2;
+  --dangerBorder:#fecdd3;
+  --dangerText:#9f1239;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  /* ✅ QBO-like (less bold overall) */
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  padding:22px;
+  font-weight:400;
+}
+
+.container{max-width:1040px;margin:0 auto}
+/* Remove left-logo layout gap completely */
+.noLeftLogo{
+  gap: 0 !important;
+}
+
+/* Guidelines inside header: flush and aligned */
+.guidelineInHeader{
+  margin-top: 14px;     /* sits nicely under subtitle */
+  margin-bottom: 0;     /* prevents extra space below header */
+  width: 100%;
+}
+
+/* When guideline sits inside header, don't add external top/bottom spacing */
+.guidelineBar{
+  margin: 0;            /* IMPORTANT: remove the old external margins */
+}
+/* =========================
+   Header (Fix gaps + align)
+   ========================= */
+.header{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:8px;
+  flex-wrap:wrap;
+}
+.brandLeft{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  flex:1;
+  min-width:0; /* ✅ allow shrink so right card stays on same line */
+}
+.brandLogo{
+  width:48px;height:48px;
+  border-radius:12px;
+  background:#fff;
+  border:1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  flex:0 0 auto;
+}
+.brandLogo img{
+  width:34px;height:34px;object-fit:contain;
+  display:block;
+}
+.titleWrap{min-width:0}
+.title{
+  font-size:40px;
+  font-weight:800;
+  letter-spacing:-0.02em;
+  margin:0;
+  line-height:1.05;
+}
+.subnote{
+  margin:8px 0 0 0;
+  color:var(--muted);
+  line-height:1.5;
+  font-size:16px;
+  max-width:760px;
+}
+.subnote b{color:var(--text);font-weight:700}
+
+/* Right Tax Year box */
+.taxYearBox{
+  background:var(--chip);
+  border:1px solid #dbeafe;
+  border-radius:18px;
+  padding:16px 18px;
+  min-width:240px;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+
+  flex:0 0 auto;
+  align-self:flex-start;
+}
+.taxYearLogo{
+  width:88px;
+  height:88px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.taxYearLogo img{
+  width:66px;height:66px;object-fit:contain;display:block;
+}
+.taxYearText{
+  font-weight:800;
+  font-size:20px;
+  color:#1d4ed8;
+  letter-spacing:0.01em;
+}
+
+/* ✅ Desktop: force single-row header to avoid weird blank space */
+@media(min-width:900px){
+  .header{flex-wrap:nowrap;}
+}
+@media(max-width:520px){
+  .title{font-size:30px}
+  .subnote{font-size:14px}
+  .taxYearBox{min-width:100%}
+}
+
+/* =========================
+   Guidelines bar
+   ========================= */
+.guidelineBar{
+  margin:0;
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  cursor:pointer;
+  user-select:none;
+}
+.guidelineBar:hover{background:#f3f6fb}
+.guidelineTitle{
+  font-weight:800;
+  color:#1d4ed8;
+  font-size:14px;
+  white-space:nowrap;
+}
+.guidelineHint{
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* =========================
+   Cards / Layout
+   ========================= */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow: var(--shadow);
+}
+.card .inner{ padding:16px; }
+.card h3{
+  margin:0 0 10px 0;
+  font-size:13px;
+  letter-spacing:0.08em;
+  color:#0b1220;
+  text-transform:uppercase;
+  font-weight:800;
+}
+
+.grid{ display:grid; gap:14px; }
+
+/* Form grid: mobile 1, tablet 2, desktop 3 */
+.grid.form{ grid-template-columns: 1fr; }
+@media(min-width:720px){ .grid.form{ grid-template-columns: 1fr 1fr; } }
+@media(min-width:980px){ .grid.form{ grid-template-columns: 1.2fr 1fr 1fr; } }
+
+.field label{
+  display:block;
+  font-size:12px;
+  color:#0b1220;
+  font-weight:700;
+  margin-bottom:6px;
+}
+
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+input{
+  width:100%;
+  padding:12px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:#fff;
+  font-size:14px;
+  outline:none;
+  font-weight:500; /* ✅ less bold than before */
+}
+input:focus{
+  border-color:#93c5fd;
+  box-shadow:0 0 0 4px rgba(59,130,246,0.12);
+}
+input:disabled{
+  background:#f8fafc;
+  color:#94a3b8;
+  cursor:not-allowed;
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.btn{
+  border:none;
+  border-radius:12px;
+  padding:12px 14px;
+  font-weight:800;
+  font-size:14px;
+  cursor:pointer;
+  transition:0.15s ease;
+  width:100%;
+}
+.btn.primary{ background:var(--blue); color:#fff; }
+.btn.primary:hover{ background:var(--blue2); }
+.btn.secondary{
+  background:#ffffff;
+  color:#0b1220;
+  border:1px solid var(--border);
+  font-weight:800;
+}
+.btn.secondary:hover{ background:#f8fafc; }
+
+@media(min-width:720px){
+  .btn{ width:auto; }
+  .btn.primary{ min-width:200px; }
+}
+
+.twoCol{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:14px;
+}
+@media(min-width:980px){
+  .twoCol{ grid-template-columns: 1fr 1.15fr; } /* ✅ slab panel slightly wider */
+}
+
+.kpis{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:10px;
+  margin-top:8px;
+}
+@media(min-width:720px){
+  .kpis{ grid-template-columns: 1fr 1fr; }
+}
+
+.kpi{
+  background:var(--soft);
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  padding:12px;
+}
+.kpi .label{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px}
+.kpi .value{font-size:18px;font-weight:900;letter-spacing:-0.02em}
+
+.row{
+  display:flex; gap:10px; align-items:flex-start; justify-content:space-between;
+  flex-wrap:wrap;
+  padding:10px 0;
+  border-bottom:1px dashed #e2e8f0;
+}
+.row:last-child{border-bottom:none}
+.row .left{color:var(--muted);font-size:13px;font-weight:700}
+.row .right{font-size:13px;font-weight:800}
+
+.pill{
+  display:inline-flex; align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  border:1px solid var(--border);
+  background:#fff;
+  color:#0b1220;
+}
+.pill.good{ background:#ecfdf5; border-color:#bbf7d0; color:#065f46; }
+.pill.warn{ background:#fffbeb; border-color:#fde68a; color:#92400e; }
+
+/* Tables */
+.tableWrap{
+  overflow:auto;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:#fff;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:760px;
+}
+th, td{
+  padding:10px 12px;
+  border-bottom:1px solid #eef2f7;
+  text-align:left;
+  font-size:13px;
+  white-space:nowrap;
+}
+th{
+  background:#f8fafc;
+  font-size:12px;
+  color:#0b1220;
+  position:sticky;
+  top:0;
+  z-index:1;
+  font-weight:800;
+}
+.trApplied{ background:#eef2ff; }
+.rightAlign{ text-align:right; }
+
+.footerNote{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+/* ✅ Combined short note (less distractive) */
+.noticeLine{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:var(--warnBg);
+  border:1px solid var(--warnBorder);
+  color:var(--warnText);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.35;
+}
+
+/* Toast */
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  background:#0b1220;
+  color:#fff;
+  padding:10px 14px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+}
+.toast.show{ opacity:1; }
+
+/* =========================
+   Modal
+   ========================= */
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(2, 6, 23, 0.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:9999;
+}
+.modalOverlay.show{ display:flex; }
+
+.modalCard{
+  width:min(760px, 100%);
+  background:#fff;
+  border-radius:18px;
+  border:1px solid var(--border);
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.22);
+  overflow:hidden;
+}
+.modalHeader{
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  background:#fbfdff;
+}
+.modalTitle{
+  font-weight:900;
+  font-size:16px;
+  color:#0b1220;
+}
+.modalSub{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+  font-weight:600;
+}
+.modalClose{
+  border:1px solid var(--border);
+  background:#fff;
+  border-radius:12px;
+  padding:8px 10px;
+  cursor:pointer;
+  font-weight:900;
+}
+.modalBody{
+  padding:14px 16px;
+}
+.modalSection{ margin-bottom:12px; }
+.modalSectionTitle{
+  font-weight:900;
+  font-size:13px;
+  margin-bottom:6px;
+  color:#0b1220;
+}
+.modalList{
+  margin:0;
+  padding-left:18px;
+  color:#0f172a;
+  font-size:13px;
+  line-height:1.55;
+}
+.modalNote{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--dangerBorder);
+  background:var(--dangerBg);
+  color:var(--dangerText);
+  font-size:12px;
+  font-weight:800;
+}
+.modalFooter{
+  padding:12px 16px;
+  border-top:1px solid var(--border);
+  display:flex;
+  justify-content:flex-end;
+  background:#fbfdff;
+}
