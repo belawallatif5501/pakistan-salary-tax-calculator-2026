@@ -4,7 +4,6 @@
 const TAX_YEAR_LABEL = "Tax Year 2026";
 const BRAND_URL = "https://salary-tax-calculator.daybook.com.pk/";
 
-// ✅ Local logo for web header + PDF
 // Put file at: ./assets/logo.png
 const LOGO_LOCAL = "./assets/logo.png";
 
@@ -20,10 +19,11 @@ const state = {
   taxableIncome: 0,
   totalTax: 0,
   effectiveMonths: 0,
+  effectiveTaxRate: 0,
   appliedSlab: null,
   slabMathPlain: "",
   surchargeApplied: false,
-  schedule: []
+  schedule: [],
 };
 
 // -------------------------
@@ -106,10 +106,7 @@ function buildExportBaseName(){
   if (c) parts.push(c);
 
   parts.push(TAX_YEAR_LABEL);
-  parts.push(formatDateSafe(new Date())); // today's date
-
-  // Example:
-  // "Belawal Latif - HBS Parking Solutions - Tax Year 2026 - 2026-03-02"
+  parts.push(formatDateSafe(new Date()));
   return parts.join(" - ");
 }
 
@@ -225,14 +222,12 @@ function syncSalaryInputs(){
   const mVal = Number(elMonthly.value);
   const aVal = Number(elAnnual.value);
 
-  // prevent negatives (also handled on calculate)
   if (mVal < 0) elMonthly.value = "";
   if (aVal < 0) elAnnual.value = "";
 
   const hasMonthly = !!elMonthly.value;
   const hasAnnual  = !!elAnnual.value;
 
-  // If annual entered: disable monthly + dates
   if (hasAnnual){
     elMonthly.disabled = true;
     elStart.disabled = true;
@@ -247,7 +242,6 @@ function syncSalaryInputs(){
     endHint.textContent = "If blank, assumes 2026-06-30";
   }
 
-  // If monthly entered: disable annual
   if (hasMonthly){
     elAnnual.disabled = true;
   } else {
@@ -264,7 +258,6 @@ elAnnual.addEventListener("input", syncSalaryInputs);
 function buildSummaryText(){
   const i = state.inputs;
   const slab = state.appliedSlab;
-  const effTaxRate = state.taxableIncome > 0 ? (state.totalTax / state.taxableIncome) * 100 : 0;
 
   const lines = [];
   lines.push(`FBR Salary Tax Calculator (${TAX_YEAR_LABEL})`);
@@ -281,6 +274,7 @@ function buildSummaryText(){
   lines.push(`Effective Months: ${state.effectiveMonths.toFixed(4)}`);
   lines.push(`Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`);
   lines.push(`Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`);
+  lines.push(`Effective Tax Rate: ${(state.effectiveTaxRate*100).toFixed(2)}%`);
   lines.push(`Applied Slab: ${slab ? slab.label : "-"}`);
   lines.push(`Slab Calculation: ${state.slabMathPlain}`);
   lines.push(`Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`);
@@ -321,6 +315,7 @@ function downloadCSV(){
     ["Effective Months", state.effectiveMonths.toFixed(6)],
     ["Taxable Income (approx)", Math.round(state.taxableIncome)],
     ["Estimated Total Tax", Math.round(state.totalTax)],
+    ["Effective Tax Rate (%)", (state.effectiveTaxRate*100).toFixed(4)],
     ["Applied Slab", slab ? slab.label : ""],
     ["Slab Calculation", state.slabMathPlain],
     ["Surcharge Applied", state.surchargeApplied ? "Yes (9%)" : "No"],
@@ -358,32 +353,36 @@ function downloadCSV(){
   URL.revokeObjectURL(url);
 }
 
-async function loadImageFromLocal(path) {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error("Logo fetch failed");
-
-  const blob = await res.blob();
-  const dataUrl = await new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = reject;
-    r.readAsDataURL(blob);
+// Logo loader: OPTIONAL. If it fails -> we skip logo (never crash PDF)
+function tryLoadLogoAsDataUrl(path) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try{
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL("image/png");
+        resolve({ ok:true, dataUrl, width: canvas.width, height: canvas.height, format:"PNG" });
+      } catch(e){
+        resolve({ ok:false });
+      }
+    };
+    img.onerror = () => resolve({ ok:false });
+    img.src = path;
   });
-
-  const img = await new Promise((resolve, reject) => {
-    const i = new Image();
-    i.onload = () => resolve(i);
-    i.onerror = reject;
-    i.src = dataUrl;
-  });
-
-  return { dataUrl, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height };
 }
 
+// Footer (Big4-style): clickable link + page number
 function addFooter(doc) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  const pageNumber = doc.internal.getNumberOfPages();
 
+  // Bottom right clickable link
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(10, 102, 194);
@@ -394,6 +393,11 @@ function addFooter(doc) {
   const y = pageHeight - 24;
 
   doc.textWithLink(text, x, y, { url: text });
+
+  // Bottom left page number
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Page ${pageNumber}`, 40, pageHeight - 24);
+
   doc.setTextColor(0,0,0);
 }
 
@@ -419,6 +423,12 @@ function ellipsize(doc, text, maxWidth){
 }
 
 async function downloadPDF(){
+  // Safety: ensure jsPDF loaded
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("PDF library not loaded. Please refresh the page and try again.");
+    return;
+  }
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:"pt", format:"a4" });
 
@@ -435,21 +445,29 @@ async function downloadPDF(){
   doc.setFontSize(14);
   doc.text(`FBR Salary Tax Calculator (${TAX_YEAR_LABEL})`, margin, y);
 
-  // Logo (top-right) - big but clean
-  try{
-    const { dataUrl, width, height } = await loadImageFromLocal(LOGO_LOCAL);
-    const maxW = 120;
-    const maxH = 44;
-    const scale = Math.min(maxW / width, maxH / height);
-    const w = Math.round(width * scale);
-    const h = Math.round(height * scale);
+  // Big4 header rule line
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(1);
+  doc.line(margin, y + 10, pageWidth - margin, y + 10);
 
-    const x = pageWidth - margin - w;
-    const yLogo = 26;
+  // Logo (optional)
+  const logo = await tryLoadLogoAsDataUrl(LOGO_LOCAL);
+  if (logo.ok) {
+    try{
+      const maxW = 140;
+      const maxH = 52;
+      const scale = Math.min(maxW / logo.width, maxH / logo.height);
+      const w = Math.round(logo.width * scale);
+      const h = Math.round(logo.height * scale);
 
-    const fmt = dataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
-    doc.addImage(dataUrl, fmt, x, yLogo, w, h);
-  } catch(e){ /* ignore logo */ }
+      const x = pageWidth - margin - w;
+      const yLogo = 20;
+
+      doc.addImage(logo.dataUrl, "PNG", x, yLogo, w, h);
+    }catch(e){
+      // ignore logo rendering
+    }
+  }
 
   y += 22;
 
@@ -487,46 +505,35 @@ async function downloadPDF(){
     rightLines.push(`Period: ${i.periodStart} to ${i.periodEnd}`);
   }
 
-  rrightLines.push(
-  `Effective Months: ${state.effectiveMonths.toFixed(4)}`,
-  `Effective Tax Rate: ${effTaxRate.toFixed(2)}%`,
-  `Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`,
-  `Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`,
-  `Applied Slab: ${slab ? slab.label : "-"}`,
-  `Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`
-);
+  rightLines.push(
+    `Effective Months: ${state.effectiveMonths.toFixed(4)}`,
+    `Taxable Income (approx): PKR ${formatPKR(state.taxableIncome)}`,
+    `Estimated Total Tax: PKR ${formatPKR(state.totalTax)}`,
+    `Effective Tax Rate: ${(state.effectiveTaxRate*100).toFixed(2)}%`,
+    `Applied Slab: ${slab ? slab.label : "-"}`,
+    `Surcharge Applied: ${state.surchargeApplied ? "Yes (9%)" : "No"}`
+  );
 
-  // Two-column summary
   const colGap = 22;
   const colW = (pageWidth - margin*2 - colGap) / 2;
   const leftX = margin;
   const rightX = margin + colW + colGap;
 
-  // Left
+  const startY = y;
+
   for (const line of leftLines){
     y = ensurePageSpace(doc, y, 14, 90);
     doc.text(line, leftX, y);
     y += 14;
   }
 
-  // Right (start from where left ended but keep consistent)
-  let yRight = 52 + 22 + 18 + 14; // approx start below "Summary"
-  yRight += (leftLines.length * 14) - (leftLines.length * 14); // keep explicit
-
-  // We want right side aligned with first left line under "Summary"
-  yRight = 52 + 22 + 18 + 14; // Title + subtitle + Summary heading lines
-  yRight += 14; // first line baseline
-  yRight = y - (leftLines.length * 14); // align to first left line
-
-  // Draw right lines
-  let yR = y - (leftLines.length * 14);
+  let yR = startY;
   for (const line of rightLines){
     yR = ensurePageSpace(doc, yR, 14, 90);
     doc.text(line, rightX, yR);
     yR += 14;
   }
 
-  // Continue y after whichever is lower
   y = Math.max(y, yR) + 8;
 
   // Slab Calculation section
@@ -551,12 +558,10 @@ async function downloadPDF(){
   doc.text("Monthly Schedule", margin, y);
   y += 14;
 
-  // Table settings (fit A4)
   const tableX = margin;
   const tableW = pageWidth - margin*2;
 
-  // Column widths (percent)
-  const colPerc = [0.16, 0.14, 0.18, 0.18, 0.16, 0.18]; // Month, Fraction, Income, Tax, Net, Cum
+  const colPerc = [0.16, 0.14, 0.18, 0.18, 0.16, 0.18];
   const colWpx = colPerc.map(p => Math.floor(tableW * p));
 
   const cols = [
@@ -594,7 +599,6 @@ async function downloadPDF(){
   }
 
   function drawRow(r){
-    // new page if needed
     if (y + rowH > pageHeight - 80){
       addFooter(doc);
       doc.addPage();
@@ -605,7 +609,6 @@ async function downloadPDF(){
     doc.setFont("helvetica","normal");
     doc.setFontSize(9);
 
-    // row line
     doc.setDrawColor(238, 242, 247);
     doc.line(tableX, y + rowH, tableX + tableW, y + rowH);
 
@@ -638,23 +641,21 @@ async function downloadPDF(){
     y += rowH;
   }
 
-  // Draw header + rows
   drawTableHeader();
   for (const r of state.schedule){
     drawRow(r);
   }
 
-  // Note (one line) + footer link
+  // Note + footer
   y = ensurePageSpace(doc, y + 10, 40, 70);
   doc.setFont("helvetica","normal");
   doc.setFontSize(9);
-  doc.setTextColor(120, 53, 15); // subtle warning tone
+  doc.setTextColor(120, 53, 15);
   const noteLines = doc.splitTextToSize(ONE_LINE_DISCLAIMER, pageWidth - margin*2);
   doc.text(noteLines, margin, y);
   doc.setTextColor(0,0,0);
 
   addFooter(doc);
-
   doc.save(`${buildExportBaseName()}.pdf`);
 }
 
@@ -668,13 +669,11 @@ document.getElementById("calcBtn").addEventListener("click", () => {
   const monthlySalary = monthlyRaw ? Number(monthlyRaw) : 0;
   const annualSalary  = annualRaw ? Number(annualRaw) : 0;
 
-  // ✅ Negative not allowed
   if (monthlySalary < 0 || annualSalary < 0) {
     alert("Salary cannot be negative.");
     return;
   }
 
-  // Must enter exactly one
   const hasMonthly = !!monthlyRaw;
   const hasAnnual  = !!annualRaw;
 
@@ -687,7 +686,6 @@ document.getElementById("calcBtn").addEventListener("click", () => {
     return;
   }
 
-  // FY 2025-26: 01-Jul-2025 to 30-Jun-2026
   const fyStart = new Date(2025, 6, 1);
   const fyEnd = new Date(2026, 5, 30);
 
@@ -699,10 +697,9 @@ document.getElementById("calcBtn").addEventListener("click", () => {
   let mode = hasAnnual ? "annual" : "monthly";
 
   if (mode === "annual"){
-    taxableIncome = annualSalary; // annualized already
+    taxableIncome = annualSalary;
     effectiveMonths = 12;
 
-    // Option 1: still show schedule
     const incomePerMonth = annualSalary / 12;
     const taxResult = salaryTaxTY2026(taxableIncome);
     const totalTax = taxResult.tax;
@@ -725,10 +722,7 @@ document.getElementById("calcBtn").addEventListener("click", () => {
         cumulative: cumulativeTax
       };
     });
-
-    // update UI later after computing tax result below
   } else {
-    // Monthly mode with dates
     if (!monthlySalary || monthlySalary <= 0) {
       alert("Please enter a valid monthly salary.");
       return;
@@ -773,10 +767,11 @@ document.getElementById("calcBtn").addEventListener("click", () => {
     });
   }
 
-  // Compute tax once (common)
   const taxResult = salaryTaxTY2026(taxableIncome);
   const totalTax = taxResult.tax;
   const appliedSlab = taxResult.slab;
+
+  const effRate = taxableIncome > 0 ? (totalTax / taxableIncome) : 0;
 
   let slabMathPlain = "";
   let slabMathHTML = "";
@@ -798,11 +793,9 @@ document.getElementById("calcBtn").addEventListener("click", () => {
       (taxResult.surchargeApplied ? ` <span class="pill warn" style="margin-left:8px;">+9% Surcharge</span>` : ``);
   }
 
-  // UI KPI
   setText("kpiIncome", `PKR ${formatPKR(taxableIncome)}`);
   setText("kpiTax", `PKR ${formatPKR(totalTax)}`);
 
-  // Period + mode
   if (mode === "annual"){
     setText("rPeriod", `2025-07-01 to 2026-06-30 (annual salary mode)`);
   } else {
@@ -810,8 +803,7 @@ document.getElementById("calcBtn").addEventListener("click", () => {
   }
 
   setText("rEffMonths", effectiveMonths.toFixed(4));
-  const effTaxRate = taxableIncome > 0 ? (totalTax / taxableIncome) * 100 : 0;
-setText("rEffTaxRate", `${effTaxRate.toFixed(2)}%`);
+  setText("rEffRate", `${(effRate*100).toFixed(2)}%`);
   setHTML("rSlab", appliedSlab.label);
   setHTML("rSlabMath", slabMathHTML);
 
@@ -825,7 +817,6 @@ setText("rEffTaxRate", `${effTaxRate.toFixed(2)}%`);
 
   renderSlabTable(appliedSlab.id);
 
-  // Schedule table
   const tbody = document.getElementById("scheduleTbody");
   tbody.innerHTML = "";
   for (const s of schedule) {
@@ -841,7 +832,6 @@ setText("rEffTaxRate", `${effTaxRate.toFixed(2)}%`);
     tbody.appendChild(tr);
   }
 
-  // Save state
   state.inputs = {
     empName: document.getElementById("empName").value.trim(),
     companyName: document.getElementById("companyName").value.trim(),
@@ -856,6 +846,7 @@ setText("rEffTaxRate", `${effTaxRate.toFixed(2)}%`);
   state.taxableIncome = taxableIncome;
   state.totalTax = totalTax;
   state.effectiveMonths = effectiveMonths;
+  state.effectiveTaxRate = effRate;
   state.appliedSlab = appliedSlab;
   state.slabMathPlain = slabMathPlain;
   state.surchargeApplied = taxResult.surchargeApplied;
@@ -876,9 +867,14 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
 
 document.getElementById("csvBtn").addEventListener("click", () => downloadCSV());
 
+// PDF button: never “dead” — always shows a message if anything unexpected happens
 document.getElementById("pdfBtn").addEventListener("click", async () => {
-  try{ await downloadPDF(); }
-  catch(e){ alert("PDF failed. Make sure assets/logo.png exists and is accessible."); }
+  try{
+    await downloadPDF();
+  }catch(e){
+    console.error("PDF error:", e);
+    alert("PDF failed due to a browser restriction. Please try on Chrome or after deploying on Vercel.");
+  }
 });
 
 // Init

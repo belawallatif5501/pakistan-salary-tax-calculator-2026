@@ -6,13 +6,13 @@
 
   <title>FBR Salary Tax Calculator (Tax Year 2026)</title>
 
-  <!-- ✅ Favicon (place favicon.png in /assets) -->
+  <!-- Favicon -->
   <link rel="icon" type="image/png" href="./assets/favicon.png" />
 
-  <!-- ✅ External CSS -->
+  <!-- Your CSS -->
   <link rel="stylesheet" href="./style.css" />
 
-  <!-- jsPDF for PDF download (client-side) -->
+  <!-- jsPDF (must load BEFORE app.js) -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 
@@ -30,7 +30,6 @@
             This is a simplified estimator (no exemptions/allowances/rebates/other income).
           </p>
 
-          <!-- ✅ Move guideline bar INTO header blank space -->
           <div class="guidelineBar guidelineInHeader" id="openGuidelines" role="button" tabindex="0" aria-label="Open guidelines">
             <div class="guidelineTitle">Guidelines / How to use</div>
             <div class="guidelineHint">Click to view assumptions & usage notes.</div>
@@ -69,7 +68,6 @@
             <div class="hint">Optional for company printout.</div>
           </div>
 
-          <!-- ✅ Monthly vs Annual -->
           <div class="field">
             <label>Monthly Salary (PKR)</label>
             <input id="monthlySalary" type="number" min="0" step="1" placeholder="e.g., 250000" />
@@ -106,7 +104,6 @@
           Allocation method: <b>Tax per effective month × month fraction</b> — purely tax perspective.
         </div>
 
-        <!-- ✅ Combined short line (note + warning + disclaimer style) -->
         <div class="noticeLine" id="noticeLine">
           Estimate only — allocation is for transparency; actual payroll withholding may vary; rounding differences may occur; refer to official FBR law/notifications for final position (no liability assumed).
         </div>
@@ -140,9 +137,9 @@
               <div class="right" id="rEffMonths">—</div>
             </div>
             <div class="row">
-  <div class="left">Effective Tax Rate</div>
-  <div class="right" id="rEffTaxRate">—</div>
-</div>
+              <div class="left">Effective Tax Rate</div>
+              <div class="right" id="rEffRate">—</div>
+            </div>
             <div class="row">
               <div class="left">Applied Slab</div>
               <div class="right" id="rSlab">—</div>
@@ -266,7 +263,7 @@
     </div>
   </div>
 
-  <!-- ✅ External JS -->
+  <!-- Your JS -->
   <script src="./app.js"></script>
 </body>
 </html>
